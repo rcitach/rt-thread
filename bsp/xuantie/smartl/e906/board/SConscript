@@ -7,9 +7,7 @@ Import('SDK_LIB')
 cwd = GetCurrentDir()
 
 # add general drivers
-src = Split('''
-board.c
-''')
+src = ['board.c']
 
 path =  [cwd]
 

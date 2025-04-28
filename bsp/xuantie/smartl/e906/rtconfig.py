@@ -48,8 +48,8 @@ if PLATFORM == 'gcc':
         '-D__RT_KERNEL_SOURCE__=1 '
         '-DCONFIG_CSI_V2=1 '
         '-DCONFIG_CSI="csi2" '
-        '-DCONFIG_SUPPORT_TSPEND=1 '
-        '-DCONFIG_SUPPORT_IRQ_NESTED=1 '
+        '-DCONFIG_SUPPORT_TSPEND=0 '
+        '-DCONFIG_SUPPORT_IRQ_NESTED=0 '
         '-DCONFIG_XIP=1 '
         '-DCONFIG_ARCH_MAINSTACK=4096 '
         '-DCONFIG_ARCH_INTERRUPTSTACK=4096 '
@@ -63,7 +63,7 @@ if PLATFORM == 'gcc':
                         -fno-strength-reduce -Os -g -Wall -Wunused -Wformat -Wformat-security -Warray-bounds -Wuninitialized \
                         -Wreturn-type -Wcomment -Wswitch -Wparentheses -Wlogical-op ' + GLOBAL_DEFINES
     
-    AFLAGS = DEVICE + ' -MP -MMD -D__ASSEMBLY__ ' + GLOBAL_DEFINES
+    AFLAGS = DEVICE + ' -MP -MMD -D"Default_IRQHandler=SW_handler" ' + GLOBAL_DEFINES
     
     LFLAGS = DEVICE +  ' -MP -MMD  -Wl,-zmax-page-size=1024 -Wl,-Map=yoc.map -Wl,-zmax-page-size=1024 -Wl,-Map=yoc.map -Wl,--whole-archive -Wl,--no-whole-archive -nostartfiles -Wl,--gc-sections '
     LFLAGS += ' -T ' + LINK_FILE

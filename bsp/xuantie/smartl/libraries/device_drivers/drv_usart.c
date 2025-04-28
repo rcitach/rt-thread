@@ -147,30 +147,20 @@ static int xuantie_putc(struct rt_serial_device *serial, char c)
 
     ret = csi_uart_send(&uart->uart, &c, 1, 50);
     if (ret == 1)
-    {
-        return 1;
-    }
-    else
-    {
-        return -1;
-    }
+        return RT_EOK;
+        
+    return RT_ERROR;
 }
 
 static int xuantie_getc(struct rt_serial_device *serial)
 {
-    int32_t ret;
-    char c;
-
+    int c = -1;
     struct xuantie_uart *uart = (struct xuantie_uart *)serial->parent.user_data;
-    ret = csi_uart_receive_async(&uart->uart, &c, 1);
-    if ((ret == 0) && (c > 0))
-    {
-        return c;
-    }
-    else
-    {
-        return -1;
-    }
+    dw_uart_regs_t *uart_base = (dw_uart_regs_t *)HANDLE_REG_BASE((&uart->uart));
+
+    csi_uart_receive(&uart->uart, &c, 1, 0x5);
+    dw_uart_enable_recv_irq(uart_base);
+    return c;  
 }
 
 static const struct rt_uart_ops xuantie_uart_ops =
