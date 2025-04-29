@@ -72,7 +72,7 @@
 #define RT_HOOK_USING_FUNC_PTR
 #define RT_USING_IDLE_HOOK
 #define RT_IDLE_HOOK_LIST_SIZE 4
-#define IDLE_THREAD_STACK_SIZE 256
+#define IDLE_THREAD_STACK_SIZE 1024
 #define RT_USING_TIMER_SOFT
 #define RT_TIMER_THREAD_PRIO 4
 #define RT_TIMER_THREAD_STACK_SIZE 512
@@ -108,6 +108,8 @@
 #define RT_VER_NUM 0x50201
 #define RT_BACKTRACE_LEVEL_MAX_NR 32
 /* end of RT-Thread Kernel */
+#define ARCH_RISCV_FPU
+#define ARCH_RISCV_FPU_D
 
 /* RT-Thread Components */
 
@@ -383,6 +385,7 @@
 
 #define BSP_USING_UART
 #define BSP_USING_UART0
+#define ENABLE_FPU
 /* end of On-chip Peripheral Drivers */
 /* end of Hardware Drivers Config */
 

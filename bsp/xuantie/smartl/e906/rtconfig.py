@@ -40,7 +40,8 @@ if PLATFORM == 'gcc':
     OBJDUMP = PREFIX + 'objdump'
     OBJCPY = PREFIX + 'objcopy'
     
-    DEVICE = ' -Wno-main -mcpu=e906 -mcmodel=medlow'
+    MCPU = ' -mcpu=e906fd '
+    DEVICE = MCPU + ' -Wno-main -mcmodel=medlow'
 
     # 提取全局宏定义
     GLOBAL_DEFINES = (
@@ -53,7 +54,7 @@ if PLATFORM == 'gcc':
         '-DCONFIG_XIP=1 '
         '-DCONFIG_ARCH_MAINSTACK=4096 '
         '-DCONFIG_ARCH_INTERRUPTSTACK=4096 '
-        '-DCONFIG_CPU_XUANTIE_E906FDP=1 '
+        '-DCONFIG_CPU_XUANTIE_E906FD=1 '
         '-DCONFIG_BOARD_SMARTL_EVB=1 '
         '-DCLI_CONFIG_STACK_SIZE=4096 '
     )

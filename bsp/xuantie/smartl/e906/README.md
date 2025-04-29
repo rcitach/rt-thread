@@ -1,4 +1,4 @@
-# XuanTie - E906
+# XuanTie - E906  Series
 
 ## 一 简介
 
@@ -27,6 +27,22 @@ E906 处理器体系结构的主要特点如下：
 • 支持可配的性能监测单元；
 • 支持玄铁扩展增强指令集  
 
+### 3.BSP支持情况
+
+- 当前BSP支持下述内核：
+
+  ```asciiarmor
+  e906 e906f e906fd e906p e906fp e906fdp
+  ```
+
+- 当前BSP默认设置的内核是e906fd，该架构支持[F] [D]扩展，可以通过menuconfig工具使能[F]扩展或者[F] [D] 扩展。
+
+- 当使用其他内核架构时需要修改，rtconfig.py文件中的`MCPU`字段。
+
+### 4.运行QEMU
+
+- BSP根目录下存在`qemu.bat`脚本，生成可执行文件后可点击该脚本直接启动QEMU.
+
 ## 二 工具
 
 - 编译器： https://www.xrvm.cn/community/download?id=4433353576298909696
@@ -36,7 +52,7 @@ E906 处理器体系结构的主要特点如下：
 
 - SDK：https://www.xrvm.cn/community/download?id=4397799570420076544
 
-## 三 使用指南
+## 三 调试方法
 
 搭建完成RT-Thread开发环境，在BSP根目录使用env工具在当前目录打开env。
 
