@@ -17,7 +17,7 @@
  */
 
 #include <csi_config.h>
-
+.global __rt_rvstack 
 .section .vectors, "aw", @progbits
     .align  6
     .globl  __Vectors
@@ -147,7 +147,7 @@ Reset_Handler:
     jal     SystemInit
 #endif
 
-    jal     pre_main
+    jal     rtthread_startup
 
     .size   Reset_Handler, . - Reset_Handler
 
@@ -161,6 +161,7 @@ __exit:
 g_base_irqstack:
     .space CONFIG_ARCH_INTERRUPTSTACK
 g_top_irqstack:
+__rt_rvstack:
 #ifdef CONFIG_KERNEL_NONE
     .align  4
     .global g_base_mainstack
