@@ -23,7 +23,7 @@
 #endif
 
 .globl  Reset_Handler
-
+.global __rt_rvstack 
 .section .vectors
     .align  6
     .globl  __Vectors
@@ -40,7 +40,7 @@ __Vectors:
     j   Default_Handler			/* 8 */
     j   Sirq_Handler			/* 9 */
     j   Default_Handler			/* 10 */
-    j   Mirq_Handler			/* 11 */
+    j   SW_handler			/* 11 */
     j   Default_Handler			/* 12 */
     j   Default_Handler			/* 13 */
     j   Default_Handler			/* 14 */
@@ -169,6 +169,7 @@ hart_out_of_bounds_loop:
 g_base_irqstack:
     .space CONFIG_ARCH_INTERRUPTSTACK * CONFIG_NR_CPUS
 g_top_irqstack:
+__rt_rvstack:
 
 #ifdef CONFIG_KERNEL_NONE
     .align  4
