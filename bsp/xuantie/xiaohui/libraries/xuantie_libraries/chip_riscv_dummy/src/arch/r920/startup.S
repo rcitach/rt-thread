@@ -23,7 +23,9 @@
 #endif
 
 .globl  Reset_Handler
-
+.global __rt_rvstack
+.equ    Mcoret_Handler, SW_handler
+.equ    Mirq_Handler, SW_handler 
 .section .vectors
     .align  6
     .globl  __Vectors
@@ -169,6 +171,7 @@ hart_out_of_bounds_loop:
 g_base_irqstack:
     .space CONFIG_ARCH_INTERRUPTSTACK * CONFIG_NR_CPUS
 g_top_irqstack:
+__rt_rvstack:
 
 #ifdef CONFIG_KERNEL_NONE
     .align  4
