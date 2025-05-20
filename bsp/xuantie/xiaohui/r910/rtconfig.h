@@ -1,7 +1,8 @@
 #ifndef RT_CONFIG_H__
 #define RT_CONFIG_H__
 
-#define XUANTIAN_XIAOHUI_R908
+#define XUANTIAN_XIAOHUI_R910
+#define CPU_NAME "r910"
 
 /* RT-Thread Kernel */
 

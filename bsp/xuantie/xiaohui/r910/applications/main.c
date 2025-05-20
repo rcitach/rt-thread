@@ -14,10 +14,7 @@
  
  int main(void)
  {
-     while(1)
-     {
-        rt_kprintf("Hello RT-Thread!\r\n");
-        rt_thread_mdelay(1000);
-    }
+     rt_kprintf("CPU %s\nHello RT-Thread!\r\n", CPU_NAME);
+     return 0;
  }
  

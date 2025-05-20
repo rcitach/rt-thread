@@ -23,7 +23,9 @@
 #endif
 
 .globl  Reset_Handler
-.global __rt_rvstack 
+.global __rt_rvstack
+.equ    Mcoret_Handler, SW_handler
+.equ    Mirq_Handler, SW_handler 
 .section .vectors
     .align  6
     .globl  __Vectors
@@ -40,7 +42,7 @@ __Vectors:
     j   Default_Handler			/* 8 */
     j   Sirq_Handler			/* 9 */
     j   Default_Handler			/* 10 */
-    j   SW_handler			/* 11 */
+    j   Mirq_Handler			/* 11 */
     j   Default_Handler			/* 12 */
     j   Default_Handler			/* 13 */
     j   Default_Handler			/* 14 */

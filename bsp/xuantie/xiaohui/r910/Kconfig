@@ -6,12 +6,17 @@ RTT_DIR := ../../../..
 
 PKGS_DIR := packages
 
-config XUANTIAN_XIAOHUI_R908
+config XUANTIAN_XIAOHUI_R910
     bool
     select ARCH_RISCV64
     select RT_USING_COMPONENTS_INIT
     select RT_USING_USER_MAIN
     default y
+
+config CPU_NAME
+    string "cpu name"
+    depends on XUANTIAN_XIAOHUI_R910
+    default "r910"
 
 source "$(RTT_DIR)/Kconfig"
 osource "$PKGS_DIR/Kconfig"
