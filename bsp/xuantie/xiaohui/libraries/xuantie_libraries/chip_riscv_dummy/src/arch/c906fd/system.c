@@ -32,6 +32,7 @@ extern void section_ram_code_copy(void);
 extern void section_bss_clear(void);
 
 #ifdef CONFIG_RISCV_SMODE
+int g_mmu_mode = 0;
 extern unsigned long __Vectors;
 unsigned long page_table_l2[512] __attribute__ ((aligned(4096)));
 unsigned long page_table_l1[512] __attribute__ ((aligned(4096)));

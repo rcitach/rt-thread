@@ -18,6 +18,7 @@ else:
 if os.getenv('RTT_EXEC_PATH'):
     EXEC_PATH = os.getenv('RTT_EXEC_PATH')
 
+EXEC_PATH = r'/opt/Xuantie-900-gcc-linux-6.6.0-musl64-x86_64-V3.0.2/bin/'
 BUILD = 'debug'
 #BUILD = 'release'
 
@@ -29,7 +30,7 @@ TARGET_NAME = 'rtthread.bin'
 #------- GCC settings ----------------------------------------------------------
 if PLATFORM == 'gcc':
     # toolchains
-    PREFIX = 'riscv64-unknown-elf-'
+    PREFIX = 'riscv64-unknown-linux-musl-'
     CC = PREFIX + 'gcc'
     CXX= PREFIX + 'g++'
     AS = PREFIX + 'gcc'
@@ -66,13 +67,13 @@ if PLATFORM == 'gcc':
         ' -DCONFIG_APP_TASK_STACK_SIZE=8192 '
         ' -DCONFIG_SYSTICK_HZ=100 '
         ' -DCONFIG_DEBUG=1 '
+        ' -DCONFIG_RISCV_SMODE=1 '
     )
 
     CFLAGS = DEVICE + ' -c -Wno-unused-function -g -Wpointer-arith -Wno-undef -Wall -ffunction-sections -fdata-sections -fno-inline-functions \
                         -fno-builtin -fno-strict-aliasing -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast' + GLOBAL_DEFINES
     
-    AFLAGS = DEVICE + ' -D"Default_IRQHandler=SW_handler" ' + GLOBAL_DEFINES
-    
+    AFLAGS = DEVICE + GLOBAL_DEFINES + ' -x assembler-with-cpp -D__ASSEMBLY__ '
     LFLAGS = DEVICE + ' -Wl,-zmax-page-size=1024 -Wl,-Map=yoc.map -nostartfiles -Wl,--gc-sections '
     LFLAGS += ' -T ' + LINK_FILE
     

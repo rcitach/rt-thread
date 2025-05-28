@@ -18,7 +18,7 @@
 #include <stdarg.h>
 #ifndef RT_USING_NANO
 #include <sys/types.h>
-#include <sys/errno.h>
+#include <errno.h>
 #if defined(RT_USING_SIGNALS) || defined(RT_USING_SMART)
 #include <sys/signal.h>
 #endif /* defined(RT_USING_SIGNALS) || defined(RT_USING_SMART) */

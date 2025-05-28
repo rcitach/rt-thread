@@ -1,0 +1,1 @@
+qemu-system-riscv64 -cpu c906fd  -machine xiaohui -kernel rtthread.elf -nographic  -gdb  tcp::23333  -S

@@ -10,7 +10,7 @@
 
 #include <rtthread.h>
 #include <unistd.h>
-#include <sys/errno.h>
+#include <errno.h>
 
 int isatty(int fd)
 {

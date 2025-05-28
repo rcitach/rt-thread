@@ -16,7 +16,7 @@ if musllibc_version:
     CPPPATH = [cwd]
     CPPDEFINES = ['RT_USING_MUSLLIBC', 'RT_USING_LIBC']
     LIBS = ['c', 'gcc']
-    LINKFLAGS = ' --specs=kernel.specs'
+    LINKFLAGS = ''
     AddDepend(['RT_USING_MUSLLIBC', 'RT_USING_LIBC'])
 
     group = group + DefineGroup('Compiler', src, depend = [''], CPPPATH = CPPPATH, LINKFLAGS = LINKFLAGS, CPPDEFINES = CPPDEFINES, LIBS = LIBS)

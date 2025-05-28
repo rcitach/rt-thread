@@ -22,27 +22,6 @@
 .global __rt_rvstack
 .equ    Mcoret_Handler, SW_handler
 .equ    Mirq_Handler, SW_handler 
-.section .vectors
-    .align  6
-    .globl  __Vectors
-    .type   __Vectors, @object
-__Vectors:
-    j   Default_Handler				/* 0 */
-    j   Stspend_Handler			/* 1 */
-    j   Default_Handler				/* 2 */
-    j   Mtspend_Handler			/* 3 */
-    j   Default_Handler				/* 4 */
-    j   Scoret_Handler			/* 5 */
-    j   Default_Handler				/* 6 */
-    j   Mcoret_Handler			/* 7 */
-    j   Default_Handler				/* 8 */
-    j   Sirq_Handler			/* 9 */
-    j   Default_Handler				/* 10 */
-    j   Mirq_Handler			/* 11 */
-    j   Default_Handler
-    j   Default_Handler
-    j   Default_Handler
-    j   Default_Handler
 
  .text
     .align  2
@@ -74,10 +53,6 @@ Reset_Handler:
 
     la      gp, __global_pointer$
 .option pop
-    la      a0, __Vectors
-    li	    a1, 0x1
-    or	    a0, a0,a1
-    csrw    mtvec, a0
 
 #ifdef CONFIG_KERNEL_NONE
     la      sp, g_top_mainstack
@@ -95,6 +70,11 @@ Reset_Handler:
     jalr a0
 #endif
 
+    csrw sie, 0
+    csrw sip, 0
+    la t0, trap_entry
+    csrw stvec, t0
+    
 #ifdef CONFIG_KERNEL_NONE
     /* Enable interrupt */
 #if defined(CONFIG_RISCV_SMODE) && CONFIG_RISCV_SMODE

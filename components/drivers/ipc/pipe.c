@@ -14,7 +14,7 @@
 #include <rthw.h>
 #include <rtdevice.h>
 #include <stdint.h>
-#include <sys/errno.h>
+#include <errno.h>
 #include <ipc/condvar.h>
 
 #if defined(RT_USING_POSIX_DEVIO) && defined(RT_USING_POSIX_PIPE)

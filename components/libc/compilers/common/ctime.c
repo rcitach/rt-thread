@@ -34,7 +34,7 @@
 #ifdef RT_USING_RTC
 #include <rtdevice.h>
 #endif /* RT_USING_RTC */
-#include <sys/errno.h>
+#include <errno.h>
 #include <unistd.h>
 #ifdef RT_USING_SMART
 #include <lwp.h>
