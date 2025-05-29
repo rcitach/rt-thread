@@ -67,7 +67,6 @@ if PLATFORM == 'gcc':
         ' -DCONFIG_APP_TASK_STACK_SIZE=8192 '
         ' -DCONFIG_SYSTICK_HZ=100 '
         ' -DCONFIG_DEBUG=1 '
-        ' -DCONFIG_RISCV_SMODE=1 '
     )
 
     CFLAGS = DEVICE + ' -c -Wno-unused-function -g -Wpointer-arith -Wno-undef -Wall -ffunction-sections -fdata-sections -fno-inline-functions \

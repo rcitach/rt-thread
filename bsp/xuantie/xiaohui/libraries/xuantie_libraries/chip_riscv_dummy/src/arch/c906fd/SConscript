@@ -2,15 +2,12 @@ from building import *
 import os
 
 cwd     = GetCurrentDir()
+src     = Glob('*.c') + Glob('*.cpp') + Glob('*_gcc.S')
 CPPPATH = [cwd]
-src =  ['startup.S']
-src += ['interrupt_gcc.S']
-src += ['context_gcc.S']
-src += ['cpuport.c']
-src += ['system.c']
-src += ['trap.c']
-src += ['vectors.S']
 
-group = DefineGroup('sys', src, depend = [''], CPPPATH = CPPPATH)
+if not GetDepend('ARCH_USING_ASID'):
+    SrcRemove(src, ['asid.c'])
+
+group = DefineGroup('libcpu', src, depend = [''], CPPPATH = CPPPATH)
 
 Return('group')

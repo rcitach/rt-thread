@@ -6,7 +6,7 @@ CPPPATH = [cwd]
 src =  ['irq.c']
 src += ['irq_port.c']
 src += ['sys_clk.c']
-src += ['tick.c']
+# src += ['tick.c']
 src += ['target_get.c']
 src += ['devices.c']
 

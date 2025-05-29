@@ -181,7 +181,7 @@ __WEAK void mdelay(uint32_t ms)
 /**
  * Ps: At least delay over 10us
 */
-void udelay(uint32_t us)
+__WEAK void udelay(uint32_t us)
 {
     us /= 10U;
 

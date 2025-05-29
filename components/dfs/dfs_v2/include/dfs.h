@@ -21,7 +21,7 @@
 #include <sys/stat.h>
 #include <sys/statfs.h>
 #include <sys/time.h>
-#include <sys/errno.h>
+#include <errno.h>
 #include <rtatomic.h>
 #include <rtdevice.h>
 

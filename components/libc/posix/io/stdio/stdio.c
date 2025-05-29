@@ -17,7 +17,7 @@
 #include <limits.h>
 #include <fcntl.h>
 #include <sys/time.h>
-#include <sys/errno.h>
+#include <errno.h>
 #include "posix/stdio.h"
 
 #define STDIO_DEVICE_NAME_MAX   32

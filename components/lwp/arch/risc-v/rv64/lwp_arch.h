@@ -13,7 +13,7 @@
 #include <rthw.h>
 #include <lwp.h>
 #include <lwp_arch_comm.h>
-
+#include <cache.h>
 #ifdef ARCH_MM_MMU
 
 #ifdef ARCH_MM_MMU_32BIT_LIMIT

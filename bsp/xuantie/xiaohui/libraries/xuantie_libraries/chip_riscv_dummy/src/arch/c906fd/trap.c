@@ -12,15 +12,15 @@
 #include <rtthread.h>
 #include <stdint.h>
 
-// #include <mm_fault.h>
-// #include <mmu.h>
+#include <mm_fault.h>
+#include <mmu.h>
 #include <encoding.h>
 #include <stack.h>
-// #include <sbi.h>
+#include <sbi.h>
 #include <riscv.h>
-// #include <interrupt.h>
-// #include <plic.h>
-#include <tick.h>
+#include <interrupt.h>
+#include <plic.h>
+#include "tick.h"
 
 #ifdef RT_USING_SMART
 #include <lwp_arch.h>

@@ -4,6 +4,9 @@
 #include <csi_config.h>
 #include <soc.h>
 
+extern unsigned int __bss_start;
+extern unsigned int __bss_end;
+
 void section_data_copy(void);
 void section_ram_code_copy(void);   
 void section_ram_code_copy(void);
