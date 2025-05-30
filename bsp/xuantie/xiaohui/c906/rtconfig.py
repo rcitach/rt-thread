@@ -24,7 +24,7 @@ BUILD = 'debug'
 
 CORE = 'risc-v'
 MAP_FILE = 'rtthread.map'
-LINK_FILE = '../libraries/xuantie_libraries/chip_riscv_dummy/gcc_flash_xiaohui.ld'
+LINK_FILE = 'link_smart.lds'
 TARGET_NAME = 'rtthread.bin'
 
 #------- GCC settings ----------------------------------------------------------

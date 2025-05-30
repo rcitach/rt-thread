@@ -57,5 +57,12 @@ library_vdir = 'build/libraries'
 # common include drivers
 objs.extend(SConscript(os.path.join(libraries_path_prefix, 'SConscript'), variant_dir=library_vdir, duplicate=0))
 
+
+stack_size = 8192
+stack_lds = open('link_stacksize.lds', 'w')
+if GetDepend('__STACKSIZE__'): stack_size = GetDepend('__STACKSIZE__')
+stack_lds.write('__STACKSIZE__ = %d;\n' % stack_size)
+stack_lds.close()
+
 # make a building
 DoBuilding(TARGET, objs)

@@ -30,146 +30,100 @@ _start:
         .dword 1
         .dword 0
 1:
-#ifndef STARTUP_USE_SBI
-    csrw mie, 0
-    csrw mip, 0
+    /* save hartid */
+    la t0, boot_hartid                /* global varible rt_boot_hartid */
+    mv t1, a0                         /* get hartid in S-mode frome a0 register */
+    sw t1, (t0)                       /* store t1 register low 4 bits in memory address which is stored in t0 */
 
-    /* pmp config */
-    li   t0, 0x24000000
-    csrw pmpaddr0, t0
-
-    li   t0, 0x8F
-    csrw pmpcfg0, t0
-
-    /* enable fp, prev-mode s-mode */
-    csrr t0, mstatus
-    li t1, (~(3 << 11))
-    and t0, t0, t1             /* Clear MPP bit */
-    li t1, (~(1 << 13))
-    and t0, t0, t1            /* Close FS */
-    li t1, (~(1 << 7))
-    and t0, t0, t1            /* Clear MPIE bit  */
-
-    li t1, ((1 << 11) | (1 << 13) | (1 << 17))  
-    or t0, t0, t1 
-    csrw mstatus, t0            /* SET MPP S mode， INIT FS, enable prev-mode  */
-
-    li t0, 0x638000    /* enable theadisaee & MM */
-    csrw mxstatus, t0
-
-    /* s-mode int&except enable*/
-    li t0, 0x222
-    csrw mideleg, t0
-    li t0, 0xb1ff
-    csrw medeleg, t0
-
-    /* mtime s-mode enable */
-    li t0, 0xffffffff;
-    csrw mcounteren, t0
-
-    la t0, 2f
-    csrw mepc, t0
-    csrw stvec, t0
-    csrw sscratch, 0
+    /* clear Interrupt Registers */
     csrw sie, 0
-    csrw satp, 0
-    mret
-2:
-#endif
-  /* save hartid */
-  la t0, boot_hartid                /* global varible rt_boot_hartid */
-  mv t1, a0                         /* get hartid in S-mode frome a0 register */
-  sw t1, (t0)                       /* store t1 register low 4 bits in memory address which is stored in t0 */
+    csrw sip, 0
+    /* set Trap Vector Base Address Register */
+    la t0, trap_entry
+    csrw stvec, t0
 
-  /* clear Interrupt Registers */
-  csrw sie, 0
-  csrw sip, 0
-  la t0, trap_entry
-  csrw stvec, t0
+    li x1, 0
+    li x2, 0
+    li x3, 0
+    li x4, 0
+    li x5, 0
+    li x6, 0
+    li x7, 0
+    li x8, 0
+    li x9, 0
+    li x10,0
+    li x11,0
+    li x12,0
+    li x13,0
+    li x14,0
+    li x15,0
+    li x16,0
+    li x17,0
+    li x18,0
+    li x19,0
+    li x20,0
+    li x21,0
+    li x22,0
+    li x23,0
+    li x24,0
+    li x25,0
+    li x26,0
+    li x27,0
+    li x28,0
+    li x29,0
+    li x30,0
+    li x31,0
 
-  li x1, 0
-  li x2, 0
-  li x3, 0
-  li x4, 0
-  li x5, 0
-  li x6, 0
-  li x7, 0
-  li x8, 0
-  li x9, 0
-  li x10,0
-  li x11,0
-  li x12,0
-  li x13,0
-  li x14,0
-  li x15,0
-  li x16,0
-  li x17,0
-  li x18,0
-  li x19,0
-  li x20,0
-  li x21,0
-  li x22,0
-  li x23,0
-  li x24,0
-  li x25,0
-  li x26,0
-  li x27,0
-  li x28,0
-  li x29,0
-  li x30,0
-  li x31,0
-
-  /* set to disable FPU */
-  li t0, SSTATUS_FS + SSTATUS_VS
-  csrc sstatus, t0
-  li t0, SSTATUS_SUM
-  csrs sstatus, t0
+    /* set to disable FPU */
+    li t0, SSTATUS_FS + SSTATUS_VS
+    csrc sstatus, t0
+    li t0, SSTATUS_SUM
+    csrs sstatus, t0
 
 .option push
 .option norelax
-  la gp, __global_pointer$
+    la gp, __global_pointer$
 .option pop
 
-  // removed SMP support here
-  la   sp, __stack_start__
-  # li   t0, __STACKSIZE__
-  li   t0, 8192
-  add  sp, sp, t0
+    /* removed SMP support here */
+    la   sp, __stack_start__
+    li   t0, __STACKSIZE__
+    add  sp, sp, t0
 
-  /**
-  * sscratch is always zero on kernel mode
-  */
-  csrw sscratch, zero
-  call init_bss
+    /**
+     * sscratch is always zero on kernel mode
+     */
+    csrw sscratch, zero
+    call init_bss
 #ifdef ARCH_MM_MMU
-  call    rt_hw_mem_setup_early
-  call    rt_kmem_pvoff
-  /* a0 := pvoff  */
-  beq     a0, zero, 1f
+    call    rt_hw_mem_setup_early
+    call    rt_kmem_pvoff
+    /* a0 := pvoff  */
+    beq     a0, zero, 1f
 
-  /* relocate pc */
-  la      x1, _after_pc_relocation
-  sub     x1, x1, a0
-  ret
+    /* relocate pc */
+    la      x1, _after_pc_relocation
+    sub     x1, x1, a0
+    ret
 _after_pc_relocation:
-  /* relocate gp */
-  sub     gp, gp, a0
+    /* relocate gp */
+    sub     gp, gp, a0
 
-  /* relocate context: sp */
-  la      sp, __stack_start__
-  # li      t0, __STACKSIZE__
-  li      t0, 8192
-  add     sp, sp, t0
+    /* relocate context: sp */
+    la      sp, __stack_start__
+    li      t0, __STACKSIZE__
+    add     sp, sp, t0
 
-  /* reset s0-fp */
-  mv      s0, zero
+    /* reset s0-fp */
+    mv      s0, zero
 
-  /* relocate stvec */
-  la      t0, trap_entry
-  csrw    stvec, t0
+    /* relocate stvec */
+    la      t0, trap_entry
+    csrw    stvec, t0
 1:
 #endif
-  call    primary_cpu_entry
+    call    sbi_init
+    call    primary_cpu_entry
 
 _never_return_here:
     j       .

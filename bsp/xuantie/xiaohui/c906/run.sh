@@ -1,1 +1,1 @@
-qemu-system-riscv64 -cpu c906fd  -machine xiaohui -kernel rtthread.elf -nographic  -gdb  tcp::23333  -S
+qemu-system-riscv64 -cpu c906fd  -machine virt -m 256M -bios fw_jump.bin  -kernel rtthread.bin -nographic  -gdb  tcp::23333  -S -d in_asm -D qemu.log 
