@@ -75,7 +75,7 @@ _start:
     li x31,0
 
     /* set to disable FPU */
-    li t0, SSTATUS_FS + SSTATUS_VS
+    li t0, SSTATUS_FS + SSTATUS_VS  /* SSTATUS_VS is zero, Adaptation through configuration   */
     csrc sstatus, t0
     li t0, SSTATUS_SUM
     csrs sstatus, t0

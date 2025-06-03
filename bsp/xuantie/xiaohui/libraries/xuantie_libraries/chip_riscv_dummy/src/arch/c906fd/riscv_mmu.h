@@ -6,7 +6,6 @@
  * Change Logs:
  * Date           Author       Notes
  * 2021-01-30     lizhirui     first version
- * 2021-05-03     lizhirui     porting to c906
  * 2023-10-12     Shell        Add permission control API
  */
 
@@ -18,13 +17,6 @@
 #include "riscv.h"
 
 #undef PAGE_SIZE
-
-/* C-SKY extend */
-#define PTE_SEC   (1UL << 59) /* Security */
-#define PTE_SHARE (1UL << 60) /* Shareable */
-#define PTE_BUF   (1UL << 61) /* Bufferable */
-#define PTE_CACHE (1UL << 62) /* Cacheable */
-#define PTE_SO    (1UL << 63) /* Strong Order */
 
 #define PAGE_OFFSET_SHIFT 0
 #define PAGE_OFFSET_BIT   12
@@ -56,25 +48,17 @@
 #define PAGE_ATTR_NEXT_LEVEL  (0)
 #define PAGE_ATTR_RWX         (PTE_X | PTE_W | PTE_R)
 #define PAGE_ATTR_READONLY    (PTE_R)
-#define PAGE_ATTR_XN          (PTE_W | PTE_R)
 #define PAGE_ATTR_READEXECUTE (PTE_X | PTE_R)
 
 #define PAGE_ATTR_USER   (PTE_U)
 #define PAGE_ATTR_SYSTEM (0)
 
-#define PAGE_ATTR_CB  (PTE_BUF | PTE_CACHE)
-#define PAGE_ATTR_DEV (PTE_SO)
-
-#define PAGE_DEFAULT_ATTR_LEAF                                         \
-    (PTE_SHARE | PTE_BUF | PTE_CACHE | PTE_A | PTE_D | PTE_G | PTE_U | \
-     PAGE_ATTR_RWX | PTE_V)
-#define PAGE_DEFAULT_ATTR_NEXT \
-    (PTE_SHARE | PTE_BUF | PTE_CACHE | PTE_A | PTE_D | PTE_G | PTE_V)
+#define PAGE_DEFAULT_ATTR_LEAF (PAGE_ATTR_RWX | PAGE_ATTR_USER | PTE_V | PTE_G)
+#define PAGE_DEFAULT_ATTR_NEXT (PAGE_ATTR_NEXT_LEVEL | PTE_V | PTE_G)
 
 #define PAGE_IS_LEAF(pte) __MASKVALUE(pte, PAGE_ATTR_RWX)
 
-#define PTE_USED(pte)  __MASKVALUE(pte, PTE_V)
-#define PTE_WRAP(attr) (attr | PTE_A | PTE_D)
+#define PTE_USED(pte) __MASKVALUE(pte, PTE_V)
 
 /**
  * encoding of SATP (Supervisor Address Translation and Protection register)
@@ -89,17 +73,13 @@
 #define ARCH_VADDR_WIDTH 39
 #define SATP_MODE        SATP_MODE_SV39
 
-#define MMU_MAP_K_DEVICE PTE_WRAP(PAGE_ATTR_DEV | PTE_G | PAGE_ATTR_XN | PTE_V)
-#define MMU_MAP_K_RWCB   PTE_WRAP(PAGE_ATTR_CB | PTE_G | PAGE_ATTR_RWX | PTE_V)
-#define MMU_MAP_K_RW     PTE_WRAP(PTE_G | PAGE_ATTR_RWX | PTE_V)
-#define MMU_MAP_U_RWCB   PTE_WRAP(PAGE_ATTR_CB | PTE_U | PAGE_ATTR_RWX | PTE_V)
-#define MMU_MAP_U_ROCB \
-    PTE_WRAP(PAGE_ATTR_CB | PTE_U | PAGE_ATTR_READONLY | PTE_V)
-#define MMU_MAP_U_RWCB_XN PTE_WRAP(PAGE_ATTR_CB | PTE_U | PAGE_ATTR_XN | PTE_V)
-#define MMU_MAP_U_RW      PTE_WRAP(PTE_U | PAGE_ATTR_RWX | PTE_V)
-#define MMU_MAP_EARLY \
-    PTE_WRAP(PAGE_ATTR_RWX | PTE_G | PTE_V | PTE_CACHE | PTE_SHARE | PTE_BUF)
-#define MMU_MAP_TRACE(attr) (attr)
+#define MMU_MAP_K_DEVICE  (PTE_G | PTE_W | PTE_R | PTE_V)
+#define MMU_MAP_K_RWCB    (PTE_G | PTE_X | PTE_W | PTE_R | PTE_V)
+#define MMU_MAP_K_RW      (PTE_G | PTE_X | PTE_W | PTE_R | PTE_V)
+#define MMU_MAP_U_RWCB    (PTE_U | PTE_X | PTE_W | PTE_R | PTE_V)
+#define MMU_MAP_U_RWCB_XN (PTE_U | PTE_W | PTE_R | PTE_V)
+#define MMU_MAP_U_RW      (PTE_U | PTE_X | PTE_W | PTE_R | PTE_V)
+#define MMU_MAP_EARLY     (PAGE_ATTR_RWX | PTE_G | PTE_V)
 
 #define PTE_XWR_MASK 0xe
 
@@ -110,7 +90,7 @@
 #define ARCH_INDEX_SIZE  (1ul << ARCH_INDEX_WIDTH)
 #define ARCH_INDEX_MASK  (ARCH_INDEX_SIZE - 1)
 
-#define ARCH_MAP_FAILED ((void *)0x8000000000000000)
+#define ARCH_MAP_FAILED ((void *)-1)
 
 void mmu_set_pagetable(rt_ubase_t addr);
 void mmu_enable_user_page_access(void);

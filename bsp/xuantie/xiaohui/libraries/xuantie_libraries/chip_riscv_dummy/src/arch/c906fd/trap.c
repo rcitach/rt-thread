@@ -20,7 +20,7 @@
 #include <riscv.h>
 #include <interrupt.h>
 #include <plic.h>
-#include "tick.h"
+#include "tick_new.h"
 
 #ifdef RT_USING_SMART
 #include <lwp_arch.h>

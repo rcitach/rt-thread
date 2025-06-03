@@ -8,10 +8,21 @@
  * 2025-04-23     Wangshun     first version
  */
 
-#include <board.h>
 #include <rthw.h>
 #include <rtthread.h>
-#include <drv_usart.h>
+#include <rtdevice.h>
+
+#include "board.h"
+#include "mm_aspace.h"
+#include "tick_new.h"
+
+// #include "drv_uart.h"
+#include "encoding.h"
+#include "stack.h"
+#include "sbi.h"
+#include "riscv.h"
+#include "plic.h"
+#include "stack.h"
 
 #ifdef RT_USING_SMART
 #include "riscv_mmu.h"
@@ -31,6 +42,14 @@ struct mem_desc platform_mem_desc[] = {
 
 #endif
 
+void primary_cpu_entry(void)
+{
+    /* disable global interrupt */
+    rt_hw_interrupt_disable();
+
+    entry();
+}
+
 #define IOREMAP_SIZE (1ul << 30)
 
 #ifndef ARCH_REMAP_KERNEL
@@ -39,34 +58,7 @@ struct mem_desc platform_mem_desc[] = {
 #define IOREMAP_VEND 0ul
 #endif /* ARCH_REMAP_KERNEL */
 
-#define RT_HEAP_SIZE        0x200
-#define RT_HW_HEAP_BEGIN    ((void *)&__bss_end)
-#define RT_HW_HEAP_END      ((void *)(((rt_size_t)RT_HW_HEAP_BEGIN) + RT_HEAP_SIZE ))
-
-void init_bss(void)
-{
-    unsigned int *dst;
-
-    dst = &__bss_start;
-    while (dst < &__bss_end)
-    {
-        *dst++ = 0;
-    }
-}
-
-void primary_cpu_entry(void)
-{
-    //初始化BSS
-    init_bss();
-    
-    //启动RT-Thread Smart内核
-    entry();
-}
-
-/**
- * This function will initialize your board.
- */
-void rt_hw_board_init()
+void rt_hw_board_init(void)
 {
 #ifdef RT_USING_SMART
     /* init data structure */
@@ -84,15 +76,34 @@ void rt_hw_board_init()
     rt_system_heap_init(RT_HW_HEAP_BEGIN, RT_HW_HEAP_END);
 #endif
 
-#ifdef BSP_USING_UART
-    rt_hw_usart_init();
-#endif
+    plic_init();
+
+    rt_hw_interrupt_init();
+
+    // rt_hw_uart_init();
 
 #ifdef RT_USING_CONSOLE
+    /* set console device */
     rt_console_set_device(RT_CONSOLE_DEVICE_NAME);
-#endif
+#endif /* RT_USING_CONSOLE */
+
+    rt_hw_tick_init();
 
 #ifdef RT_USING_COMPONENTS_INIT
     rt_components_board_init();
 #endif
+
+#ifdef RT_USING_HEAP
+    rt_kprintf("heap: [0x%08x - 0x%08x]\n", (rt_ubase_t)RT_HW_HEAP_BEGIN, (rt_ubase_t)RT_HW_HEAP_END);
+#endif /* RT_USING_HEAP */
 }
+
+void rt_hw_cpu_reset(void)
+{
+    sbi_shutdown();
+
+    while (1)
+        ;
+}
+MSH_CMD_EXPORT_ALIAS(rt_hw_cpu_reset, reboot, reset machine);
+
