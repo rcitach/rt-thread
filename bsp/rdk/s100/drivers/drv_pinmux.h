@@ -35,3 +35,4 @@ rt_err_t s100_pin_set_function(s100_pin_t pin, s100_pin_function_t function);
 rt_err_t s100_pin_set_pull(s100_pin_t pin, s100_pin_pull_t pull);
 
 #endif
+

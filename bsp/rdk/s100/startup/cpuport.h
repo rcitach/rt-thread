@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2024, Shanghai Real-Thread Electronic Technology Co.,Ltd
+ * Copyright (c) 2011-2026, Shanghai Real-Thread Electronic Technology Co.,Ltd
  *
  * Change Logs:
  * Date           Author       Notes
@@ -71,19 +71,20 @@ struct rt_hw_stack
 #define J_Bit       (1<<24)
 
 
-// rt_inline void rt_hw_isb(void)
-// {
-//     __asm volatile ("isb":::"memory");
-// }
+/* rt_inline void rt_hw_isb(void) */
+/* { */
+/*     __asm volatile ("isb":::"memory"); */
+/* } */
 
-// rt_inline void rt_hw_dmb(void)
-// {
-//     __asm volatile ("dmb":::"memory");
-// }
+/* rt_inline void rt_hw_dmb(void) */
+/* { */
+/*     __asm volatile ("dmb":::"memory"); */
+/* } */
 
-// rt_inline void rt_hw_dsb(void)
-// {
-//     __asm volatile ("dsb":::"memory");
-// }
+/* rt_inline void rt_hw_dsb(void) */
+/* { */
+/*     __asm volatile ("dsb":::"memory"); */
+/* } */
 
 #endif  /*CPUPORT_H__*/
+

@@ -133,3 +133,4 @@ rt_bool_t s100_board_irq_is_supported(int irq)
 
     return RT_FALSE;
 }
+

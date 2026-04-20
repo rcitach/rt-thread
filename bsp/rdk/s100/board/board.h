@@ -96,3 +96,4 @@ rt_inline rt_uint32_t platform_get_gic_redist_base(void)
 #endif
 
 #endif
+

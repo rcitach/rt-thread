@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2024, RT-Thread Development Team
+ * Copyright (c) 2006-2026, RT-Thread Development Team
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -54,12 +54,12 @@
 */
 #define GICD_CTLR_RWP ((unsigned int)1<<31)
 #define GICD_CTLR_E1NWF (1<<7)
-#define GICD_CTLR_DS (1<<6)     // 当两种安全模式被同时支持时，可以通过GICD_CTLR.DS==1关闭其中一个，只支持non-secure模式
+#define GICD_CTLR_DS (1<<6)     /* 当两种安全模式被同时支持时，可以通过GICD_CTLR.DS==1关闭其中一个，只支持non-secure模式 */
 #define GICD_CTLR_ARE_NS (1<<5)
 #define GICD_CTLR_ARE_S (1<<4)
-#define GICD_CTLR_ENGRP1S (1<<2)    // secure group 1
-#define GICD_CTLR_ENGRP1NS (1<<1)   // non-secure group 1
-#define GICD_CTLR_ENGRP0 (1<<0)     // group 0
+#define GICD_CTLR_ENGRP1S (1<<2)    /* secure group 1 */
+#define GICD_CTLR_ENGRP1NS (1<<1)   /* non-secure group 1 */
+#define GICD_CTLR_ENGRP0 (1<<0)     /* group 0 */
 
 /** Macro to access the Redistributor Control Register (GICR_CTLR)
 */
@@ -133,7 +133,7 @@
 #define GIC_RDISTSGI_ICFGR0(hw_base)         __REG32((hw_base) + GIC_RSGI_OFFSET + 0xC00U)
 #define GIC_RDISTSGI_ICFGR1(hw_base)         __REG32((hw_base) + GIC_RSGI_OFFSET + 0xC04U)
 #define GIC_RDISTSGI_IGRPMODR0(hw_base, n)   __REG32((hw_base) + GIC_RSGI_OFFSET + 0xD00U + (n)*4)
-#define GIC_RDISTSGI_NSACR(hw_base)          __REG32((hw_base) + GIC_RSGI_OFFSET + 0xE00U)   // 当执行一个非安全模式到安全模式的访问
+#define GIC_RDISTSGI_NSACR(hw_base)          __REG32((hw_base) + GIC_RSGI_OFFSET + 0xE00U)   /* 当执行一个非安全模式到安全模式的访问 */
 
 #define GIC_RSGI_AFF1_OFFSET    16
 #define GIC_RSGI_AFF2_OFFSET    32

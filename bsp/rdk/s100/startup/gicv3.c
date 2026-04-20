@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2024, RT-Thread Development Team
+ * Copyright (c) 2006-2026, RT-Thread Development Team
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -425,8 +425,8 @@ void arm_gic_set_system_register_enable_mask(rt_uint32_t index, rt_uint32_t valu
     /* set priority mask */
     __set_gicv3_reg(ICC_SRE, value);
     __ISB();
-//    __asm volatile ("isb 0xF"::
-//                        :"memory");
+/*    __asm volatile ("isb 0xF":: */
+/*                        :"memory"); */
 }
 
 rt_uint32_t arm_gic_get_system_register_enable_mask(rt_uint32_t index)
@@ -682,9 +682,9 @@ int arm_gic_redist_init(rt_uint32_t index)
 
     base = _gic_table[index].redist_hw_base[cpu_id];
     /* redistributor enable */
-    // 将原来的值的第二位清零，其他位保持不变
+    /* 将原来的值的第二位清零，其他位保持不变 */
     GIC_RDIST_WAKER(base) &= ~(1U << 1);
-    // 一直执行，直到GIC_RDIST_WAKER(base)的值的第2位（从0开始计数）为0
+    /* 一直执行，直到GIC_RDIST_WAKER(base)的值的第2位（从0开始计数）为0 */
     while (GIC_RDIST_WAKER(base) & (1 << 2))
     {
         ;
@@ -708,7 +708,7 @@ int arm_gic_redist_init(rt_uint32_t index)
     }
 
     /* Trigger level for PPI interrupts*/
-    GIC_RDISTSGI_ICFGR1(base) = 0x0U; // PPI is level-sensitive.
+    GIC_RDISTSGI_ICFGR1(base) = 0x0U; /* PPI is level-sensitive. */
     return 0;
 }
 
@@ -828,3 +828,4 @@ long gic_dump(void)
 
     return 0;
 }
+

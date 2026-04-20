@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2024, RT-Thread Development Team
+ * Copyright (c) 2006-2026, RT-Thread Development Team
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -78,3 +78,4 @@ struct rt_hw_stack
 void rt_hw_show_register(struct rt_hw_exp_stack *regs);
 
 #endif
+

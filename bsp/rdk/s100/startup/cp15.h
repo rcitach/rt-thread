@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2024, Shanghai Real-Thread Electronic Technology Co.,Ltd
+ * Copyright (c) 2011-2026, Shanghai Real-Thread Electronic Technology Co.,Ltd
  *
  * Change Logs:
  * Date           Author       Notes
@@ -27,3 +27,4 @@
     __asm volatile("MCRR p" # cp ", " # op1 ", %Q0, %R0, c" # CRm  : : "r" (Rt) : "memory" )
 
 #endif
+

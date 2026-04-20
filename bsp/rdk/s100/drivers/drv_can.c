@@ -318,6 +318,7 @@ static rt_uint32_t s100_can_basic_build_mb_cs(rt_uint32_t code, rt_uint32_t dlc,
     {
         cs |= (1UL << 21) | (1UL << 22);
     }
+
     if (rtr != RT_FALSE)
     {
         cs |= (1UL << 20);
@@ -437,6 +438,7 @@ static void s100_can_basic_update_irq_mask(struct s100_can_basic *ctrl, rt_uint3
         {
             imask1_tx |= (1UL << i);
         }
+
         for (i = 0U; i < (S100_CAN_MAX_MB_INDEX - 32U); i++)
         {
             imask2_tx |= (1UL << i);
@@ -974,7 +976,7 @@ static rt_err_t s100_can_basic_configure(struct rt_can_device *can, struct can_c
         CAN_RET(-RT_EINVAL, "configure invalid sndboxnumber=0");
     }
 
-    //TODO legacy RXFIFO 0-S100_CAN_MAX_MB_INDEX
+    /* TODO legacy RXFIFO 0-S100_CAN_MAX_MB_INDEX */
     if (cfg->sndboxnumber > S100_CAN_MAX_MB_INDEX - S100_CAN_BASIC_TX_MB_START)
     {
         CAN_RET_FMT(-RT_EINVAL, "configure sndboxnumber too large=%lu",
@@ -1048,6 +1050,7 @@ static rt_err_t s100_can_basic_control(struct rt_can_device *can, int cmd, void 
         {
             can->config.baud_rate = new_baud;
         }
+
         if (ret != RT_EOK)
         {
             CAN_RET_FMT(ret, "control set baud failed ctrl=%s baud=%lu",
@@ -1066,6 +1069,7 @@ static rt_err_t s100_can_basic_control(struct rt_can_device *can, int cmd, void 
         {
             can->config.mode = new_mode;
         }
+
         if (ret != RT_EOK)
         {
             CAN_RET_FMT(ret, "control set mode failed ctrl=%s mode=%lu",
@@ -1148,6 +1152,7 @@ static rt_ssize_t s100_can_basic_sendmsg_nonblocking(struct rt_can_device *can, 
         {
             return RT_EOK;
         }
+
         if (ret != -RT_EBUSY)
         {
             CAN_RET_FMT(ret, "sendmsg nonblocking failed boxno=%lu", (unsigned long)boxno);
@@ -1283,7 +1288,7 @@ int rt_hw_can_init(void)
     s100_can_board_enable_transceiver();
 
     for (i = 0U; i < (sizeof(s100_can_basics) / sizeof(s100_can_basics[0])); i++)
-    {   
+    {
         s100_can_basics[i].can_dev.config = cfg;
         s100_can_basics[i].can_dev.parent.user_data = &s100_can_basics[i];
 
@@ -1311,3 +1316,4 @@ int rt_hw_can_init(void)
     return RT_EOK;
 }
 INIT_DEVICE_EXPORT(rt_hw_can_init);
+

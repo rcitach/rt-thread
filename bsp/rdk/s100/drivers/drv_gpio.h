@@ -28,3 +28,4 @@ void s100_gpio_write(rt_uint8_t pin, rt_uint8_t value);
 rt_uint8_t s100_gpio_read(rt_uint8_t pin);
 
 #endif
+

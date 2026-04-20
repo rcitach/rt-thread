@@ -33,57 +33,58 @@
  * for use by the Linux Master */
 #ifndef HB_RSC_TABLE_H
 #define HB_RSC_TABLE_H
- 
+
 #include <stddef.h>
 #include <stdint.h>
 
 struct fw_rsc_version_with_type {
-	uint32_t typefw_rsc_version;
-	uint8_t version[48];
-	uint8_t compile_time[16];
-	uint8_t git_hash_id[40];
+    uint32_t typefw_rsc_version;
+    uint8_t version[48];
+    uint8_t compile_time[16];
+    uint8_t git_hash_id[40];
 };
 
 enum fw_resource_type {
-	RSC_CARVEOUT		= 0,
-	RSC_DEVMEM		= 1,
-	RSC_TRACE		= 2,
-	RSC_VDEV		= 3,
-	RSC_RPROC_MEM	= 4U,
-	RSC_FW_CHKSUM	= 5U,
-	RSC_VERSION		= 6U,
-	RSC_LAST		= 7U,
-	RSC_VENDOR_START	= 128,
-	RSC_VENDOR_END		= 512,
+    RSC_CARVEOUT        = 0,
+    RSC_DEVMEM      = 1,
+    RSC_TRACE       = 2,
+    RSC_VDEV        = 3,
+    RSC_RPROC_MEM   = 4U,
+    RSC_FW_CHKSUM   = 5U,
+    RSC_VERSION     = 6U,
+    RSC_LAST        = 7U,
+    RSC_VENDOR_START    = 128,
+    RSC_VENDOR_END      = 512,
 };
 
 struct fw_rsc_devmem_with_type {
-	uint32_t typefw_rsc_devmem;
-	uint32_t da;
-	uint32_t pa;
-	uint32_t len;
-	uint32_t flags;
-	uint32_t reserved;
-	uint8_t name[32];
+    uint32_t typefw_rsc_devmem;
+    uint32_t da;
+    uint32_t pa;
+    uint32_t len;
+    uint32_t flags;
+    uint32_t reserved;
+    uint8_t name[32];
 };
 
 #define NO_RESOURCE_ENTRIES         (7U)
 
 /* Resource table for the given remote */
 struct remote_resource_table {
-	uint32_t version;
-	uint32_t num;
-	uint32_t reserved[2];
-	uint32_t offset[NO_RESOURCE_ENTRIES];
-	struct fw_rsc_version_with_type fw_version; /*PRQA S ALL*/
-	struct fw_rsc_devmem_with_type startup_devmem;
-	struct fw_rsc_devmem_with_type flash_devmem;
-	struct fw_rsc_devmem_with_type freertos_heap_devmem;
-	struct fw_rsc_devmem_with_type log_devmem;
-	struct fw_rsc_devmem_with_type scmi_devmem;
-	struct fw_rsc_devmem_with_type atcm_devmem;
+    uint32_t version;
+    uint32_t num;
+    uint32_t reserved[2];
+    uint32_t offset[NO_RESOURCE_ENTRIES];
+    struct fw_rsc_version_with_type fw_version; /*PRQA S ALL*/
+    struct fw_rsc_devmem_with_type startup_devmem;
+    struct fw_rsc_devmem_with_type flash_devmem;
+    struct fw_rsc_devmem_with_type freertos_heap_devmem;
+    struct fw_rsc_devmem_with_type log_devmem;
+    struct fw_rsc_devmem_with_type scmi_devmem;
+    struct fw_rsc_devmem_with_type atcm_devmem;
 }__attribute__((packed, aligned(0x100)));
 
 extern const struct remote_resource_table resources;
 
 #endif /* RSC_TABLE_H_ */
+

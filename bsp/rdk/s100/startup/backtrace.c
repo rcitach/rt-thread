@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2024, RT-Thread Development Team
+ * Copyright (c) 2006-2026, RT-Thread Development Team
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -235,6 +235,7 @@ static int unwind_exec_pop_subset_r4_to_r13(struct unwind_ctrl_block *ctrl,
         mask >>= 1;
         reg++;
     }
+
     if (!load_sp)
         ctrl->vrs[SP] = (unsigned long)vsp;
 
@@ -501,7 +502,7 @@ void unwind_backtrace(struct pt_regs *regs, const struct unwind_idx exidx_start[
         urc = unwind_frame(&frame, &origin_idx, exidx_start, exidx_end);
         if (urc < 0)
             break;
-        //dump_backtrace_entry(where, frame.pc, frame.sp - 4);
+        /* dump_backtrace_entry(where, frame.pc, frame.sp - 4); */
 #ifndef RT_BACKTRACE_FUNCTION_NAME
         rt_kprintf(" %08x", frame.pc);
 #endif
@@ -542,4 +543,5 @@ rt_err_t rt_backtrace(void)
     rt_unwind(&regs, 8);
     return RT_EOK;
 }
-#endif  // (__ICCARM__) undefined
+#endif  /* (__ICCARM__) undefined */
+

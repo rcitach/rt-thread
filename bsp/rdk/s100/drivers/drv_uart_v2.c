@@ -60,10 +60,10 @@
 /*
  * These are the definitions for the Interrupt Enable Register
  */
-#define UART_IER_MSI	(0x08U)	     /**< Enable Modem status interrupt */
-#define UART_IER_RLSI	(0x04U)	     /**< Enable receiver line status interrupt */
-#define UART_IER_THRI	(0x02U)	     /**< Enable Transmitter holding register int. */
-#define UART_IER_RDI	(0x01U)	     /**< Enable receiver data interrupt */
+#define UART_IER_MSI    (0x08U)      /**< Enable Modem status interrupt */
+#define UART_IER_RLSI   (0x04U)      /**< Enable receiver line status interrupt */
+#define UART_IER_THRI   (0x02U)      /**< Enable Transmitter holding register int. */
+#define UART_IER_RDI    (0x01U)      /**< Enable receiver data interrupt */
 
 #define UART4_IRQn                     (45)
 #define UART5_IRQn                     (46)
@@ -206,6 +206,7 @@ static void s100_uart_isr(int vector, void *param)
     {
         return;
     }
+
     switch (iir & UART_IIR_ID)
     {
     case UART_IIR_RDI:
@@ -431,7 +432,7 @@ static rt_err_t s100_uart_control(struct rt_serial_device *serial, int cmd, void
 
 static int s100_uart_putc(struct rt_serial_device *serial, char c)
 {
-    
+
     struct s100_uart *uart;
 
     RT_ASSERT(serial != RT_NULL);
@@ -520,3 +521,4 @@ int rt_hw_uart_init(void)
 }
 INIT_BOARD_EXPORT(rt_hw_uart_init);
 #endif /* RT_USING_SERIAL_V2 */
+

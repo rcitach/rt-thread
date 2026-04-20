@@ -492,3 +492,4 @@ int rt_hw_pin_init(void)
     return rt_device_pin_register("pin", &s100_pin_ops, RT_NULL);
 }
 INIT_DEVICE_EXPORT(rt_hw_pin_init);
+

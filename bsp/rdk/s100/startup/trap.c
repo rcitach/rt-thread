@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2024, RT-Thread Development Team
+ * Copyright (c) 2006-2026, RT-Thread Development Team
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -12,7 +12,7 @@
 #include <gicv3.h>
 #include <rtthread.h>
 #include <rthw.h>
-//#include <board.h>
+/* #include <board.h> */
 
 #include "interrupt.h"
 
@@ -340,3 +340,4 @@ void rt_hw_trap_fiq(void)
     /* end of interrupt */
     rt_hw_interrupt_ack(ir);
 }
+

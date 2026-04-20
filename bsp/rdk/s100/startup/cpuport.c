@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2024, Shanghai Real-Thread Electronic Technology Co.,Ltd
+ * Copyright (c) 2011-2026, Shanghai Real-Thread Electronic Technology Co.,Ltd
  *
  * Change Logs:
  * Date           Author       Notes
@@ -56,3 +56,4 @@ void rt_hw_cpu_shutdown()
 }
 
 /*@}*/
+

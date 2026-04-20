@@ -145,3 +145,4 @@ rt_err_t s100_pin_set_pull(s100_pin_t pin, s100_pin_pull_t pull)
     s100_pin_cfg_regs[pin].value = cfg.value;
     return RT_EOK;
 }
+

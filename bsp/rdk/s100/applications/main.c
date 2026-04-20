@@ -14,3 +14,4 @@ int main(void)
     rt_kprintf("Hi, RT-Thread!\n");
     return 0;
 }
+

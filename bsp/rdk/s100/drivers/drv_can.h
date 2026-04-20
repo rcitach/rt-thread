@@ -237,7 +237,7 @@ typedef struct
 #define FLEXCAN_CTRL1_SMP_WIDTH                  (1U)
 #define FLEXCAN_CTRL1_SMP(x)                     (((rt_uint32_t)(((rt_uint32_t)(x)) << FLEXCAN_CTRL1_SMP_SHIFT)) & FLEXCAN_CTRL1_SMP_MASK)
 
-#define FLEXCAN_CTRL1_CLKSRC_MASK                (0x2000U)//zjh add
+#define FLEXCAN_CTRL1_CLKSRC_MASK                (0x2000U)/* zjh add */
 #define FLEXCAN_CTRL1_CLKSRC_SHIFT                 (13U)
 #define FLEXCAN_CTRL1_CLKSRC(x)                  (((rt_uint32_t)(((rt_uint32_t)(x)) << FLEXCAN_CTRL1_CLKSRC_SHIFT)) & FLEXCAN_CTRL1_CLKSRC_MASK)
 
@@ -1221,3 +1221,4 @@ typedef struct
 #define FLEXCAN_IP_FEATURE_EXPANDABLE_MEMORY_NUM           (6U)
 
 #endif
+

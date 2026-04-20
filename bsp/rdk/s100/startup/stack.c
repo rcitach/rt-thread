@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2024, Shanghai Real-Thread Electronic Technology Co.,Ltd
+ * Copyright (c) 2011-2026, Shanghai Real-Thread Electronic Technology Co.,Ltd
  *
  * Change Logs:
  * Date           Author       Notes
@@ -8,7 +8,7 @@
 
 #include "armv8.h"
 #include <rtthread.h>
-//#include <board.h>
+/* #include <board.h> */
 
 /**
  * This function will initialize thread stack
@@ -69,3 +69,4 @@ rt_uint8_t *rt_hw_stack_init(void *tentry, void *parameter,
 }
 
 /*@}*/
+
