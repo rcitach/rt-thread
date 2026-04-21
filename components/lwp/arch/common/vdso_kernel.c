@@ -90,6 +90,16 @@ static void rt_vdso_normalize_timespec(struct timespec *ts)
     }
 }
 
+static void rt_vdso_counter_to_timespec(rt_uint64_t counter_value,
+                                        struct timespec *ts)
+{
+    rt_uint64_t monotonic_ns;
+
+    monotonic_ns = rt_clock_time_counter_to_ns(counter_value);
+    ts->tv_sec = monotonic_ns / RT_VDSO_NSEC_PER_SEC;
+    ts->tv_nsec = monotonic_ns % RT_VDSO_NSEC_PER_SEC;
+}
+
 static struct timespec rt_vdso_add_timespec(const struct timespec *lhs,
                                             const struct timespec *rhs)
 {
@@ -106,13 +116,14 @@ static int rt_vdso_read_monotonic_snapshot(struct timespec *monotonic_time,
                                            rt_uint64_t     *counter_value,
                                            rt_uint64_t     *counter_freq)
 {
-    if (rt_clock_boottime_get_ns(monotonic_time) != RT_EOK)
+    *counter_value = rt_clock_time_get_counter();
+    *counter_freq = rt_clock_time_get_freq();
+    if (*counter_freq == 0)
     {
         return -RT_ERROR;
     }
 
-    *counter_value = rt_clock_time_get_counter();
-    *counter_freq = rt_clock_time_get_freq();
+    rt_vdso_counter_to_timespec(*counter_value, monotonic_time);
 
     return RT_EOK;
 }
