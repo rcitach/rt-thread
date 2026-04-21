@@ -24,7 +24,7 @@
 #include <rtatomic.h>
 
 #if defined(RT_USING_SMART) && defined(RT_USING_VDSO)
-#include <vdso.h>
+#include "vdso_kernel.h"
 #endif
 
 #ifdef RT_USING_SMP
@@ -197,7 +197,7 @@ void rt_tick_increase_tick(rt_tick_t tick)
     rt_timer_check();
 
 #ifdef RT_USING_VDSO
-    rt_vdso_update_glob_time();
+    rt_vdso_sync_clock_data();
 #endif
 }
 

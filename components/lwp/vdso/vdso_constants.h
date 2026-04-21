@@ -8,18 +8,16 @@
  * 2024-07-04     rcitach        init ver.
  */
 
-#ifndef __ASM_VDSO_H
-#define __ASM_VDSO_H
+#ifndef RT_VDSO_CONSTANTS_H
+#define RT_VDSO_CONSTANTS_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define __VVAR_PAGES        2
-#define VDSO_PAGE_SHIFT     12
-#define VDSO_PAGE_SIZE      (1 << VDSO_PAGE_SHIFT)
-
-#define BIT_MASK(nr)        ((1) << (nr))
+#define RT_VDSO_DATA_PAGE_COUNT 1
+#define RT_VDSO_PAGE_SHIFT      12
+#define RT_VDSO_PAGE_SIZE       (1 << RT_VDSO_PAGE_SHIFT)
 
 #ifndef read_barrier_depends
 #define read_barrier_depends()      do { } while (0)
@@ -29,10 +27,16 @@ extern "C" {
 #define smp_read_barrier_depends()  read_barrier_depends()
 #endif
 
-#define VDSO_PATH "../user/build/libvdso.so"
+#if defined(__aarch64__)
+#define RT_VDSO_IMAGE_PATH "../user/build/aarch64/libvdso.so"
+#elif defined(__riscv)
+#define RT_VDSO_IMAGE_PATH "../user/build/risc-v/libvdso.so"
+#else
+#error "Unsupported architecture for vDSO"
+#endif
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  /* __ASM_VDSO_H */
+#endif /* RT_VDSO_CONSTANTS_H */

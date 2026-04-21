@@ -26,7 +26,7 @@
 #endif
 
 #ifdef RT_USING_VDSO
-#include <vdso.h>
+#include <vdso_kernel.h>
 #endif
 
 #define DBG_TAG "load.elf"
@@ -783,13 +783,13 @@ static int elf_aux_fill(elf_load_info_t *load_info)
     ELF_AUX_ENT(aux_info, AT_SECURE, 0);
 
 #ifdef RT_USING_VDSO
-    if(RT_EOK == arch_setup_additional_pages(load_info->lwp))
+    if(RT_EOK == rt_vdso_map_process_image(load_info->lwp))
     {
         ELF_AUX_ENT(aux_info, AT_SYSINFO_EHDR, (size_t)load_info->lwp->vdso_vbase);
     }
     else
     {
-        LOG_W("vdso map error,VDSO currently only supports aarch64 architecture!");
+        LOG_W("vdso map error, skip AT_SYSINFO_EHDR setup");
     }
 #endif
 
