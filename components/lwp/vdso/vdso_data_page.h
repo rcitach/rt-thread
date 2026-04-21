@@ -22,6 +22,7 @@ extern "C" {
 
 #define RT_VDSO_CLOCK_ID_MAX 16
 #define RT_VDSO_NSEC_PER_SEC 1000000000ULL
+#define RT_VDSO_FLAG_REALTIME_VALID (1U << 0)
 
 enum rt_vdso_clock_data_index
 {

@@ -101,6 +101,18 @@ static void rt_vdso_counter_to_timespec(rt_uint64_t counter_value,
     ts->tv_nsec = monotonic_ns % RT_VDSO_NSEC_PER_SEC;
 }
 
+static struct timespec rt_vdso_timespec_subtract(const struct timespec *lhs,
+                                                 const struct timespec *rhs)
+{
+    struct timespec ret;
+
+    ret.tv_sec = lhs->tv_sec - rhs->tv_sec;
+    ret.tv_nsec = lhs->tv_nsec - rhs->tv_nsec;
+    rt_vdso_normalize_timespec(&ret);
+
+    return ret;
+}
+
 static struct timespec rt_vdso_add_timespec(const struct timespec *lhs,
                                             const struct timespec *rhs)
 {
@@ -129,15 +141,58 @@ static int rt_vdso_read_monotonic_snapshot(struct timespec *monotonic_time,
     return RT_EOK;
 }
 
+static void rt_vdso_update_data_page_flags(void)
+{
+    rt_uint32_t flags = 0;
+
+    if (rt_vdso_realtime_offset_ready)
+    {
+        flags |= RT_VDSO_FLAG_REALTIME_VALID;
+    }
+
+    rt_vdso_kernel_data_page->flags = flags;
+}
+
 static void rt_vdso_store_clock_snapshot(const struct timespec *monotonic_time,
                                          rt_uint64_t counter_value,
                                          rt_uint64_t counter_freq)
 {
     rt_vdso_kernel_data_page->counter_last = counter_value;
     rt_vdso_kernel_data_page->counter_freq = counter_freq;
+    rt_vdso_update_data_page_flags();
     rt_vdso_kernel_data_page->base_time[RT_VDSO_CLOCK_MONOTONIC_INDEX] = *monotonic_time;
-    rt_vdso_kernel_data_page->base_time[RT_VDSO_CLOCK_REALTIME_INDEX] =
-        rt_vdso_add_timespec(monotonic_time, &rt_vdso_realtime_offset);
+    if (rt_vdso_realtime_offset_ready)
+    {
+        rt_vdso_kernel_data_page->base_time[RT_VDSO_CLOCK_REALTIME_INDEX] =
+            rt_vdso_add_timespec(monotonic_time, &rt_vdso_realtime_offset);
+    }
+    else
+    {
+        rt_vdso_kernel_data_page->base_time[RT_VDSO_CLOCK_REALTIME_INDEX] = *monotonic_time;
+    }
+}
+
+void rt_vdso_set_realtime(const struct timespec *realtime)
+{
+    struct timespec monotonic;
+    rt_uint64_t counter;
+    rt_uint64_t freq;
+
+    if (rt_vdso_runtime_status != RT_EOK || realtime == RT_NULL)
+    {
+        return;
+    }
+
+    if (rt_vdso_read_monotonic_snapshot(&monotonic, &counter, &freq) != RT_EOK)
+    {
+        return;
+    }
+
+    rt_vdso_data_page_write_begin(rt_vdso_kernel_data_page);
+    rt_vdso_realtime_offset = rt_vdso_timespec_subtract(realtime, &monotonic);
+    rt_vdso_realtime_offset_ready = RT_TRUE;
+    rt_vdso_store_clock_snapshot(&monotonic, counter, freq);
+    rt_vdso_data_page_write_end(rt_vdso_kernel_data_page);
 }
 
 static void *rt_vdso_map_physical_pages(struct rt_lwp *lwp, void *user_va,
@@ -209,7 +264,7 @@ static int rt_vdso_map_binary_pages(enum rt_vdso_binary_id binary_id,
     if (data_page_base == RT_NULL)
     {
         lwp->vdso_vbase = RT_NULL;
-        return RT_ERROR;
+        return -RT_ERROR;
     }
 
     image_base = (uint8_t *)data_page_base + data_page_len;
@@ -221,7 +276,7 @@ static int rt_vdso_map_binary_pages(enum rt_vdso_binary_id binary_id,
     {
         lwp_unmap_user_phy(lwp, data_page_base);
         lwp->vdso_vbase = RT_NULL;
-        return RT_ERROR;
+        return -RT_ERROR;
     }
 
     lwp->vdso_vbase = image_base;
@@ -266,6 +321,7 @@ static int rt_vdso_validate_image(void)
 
     rt_memset(rt_vdso_data_page_store.raw, 0, sizeof(rt_vdso_data_page_store.raw));
     rt_vdso_realtime_offset_ready = RT_FALSE;
+    rt_memset(&rt_vdso_realtime_offset, 0, sizeof(rt_vdso_realtime_offset));
 
     if (rt_memcmp(rt_vdso_binaries[RT_VDSO_BINARY_COMMON].image_start,
                   RT_VDSO_IMAGE_ELF_MAGIC, RT_VDSO_IMAGE_ELF_MAGIC_LEN))

@@ -55,6 +55,11 @@ int rt_vdso_clock_gettime_impl(clockid_t clock, struct timespec *ts)
     do
     {
         seq = rt_vdso_data_read_begin(data_page);
+        if (index == RT_VDSO_CLOCK_REALTIME_INDEX &&
+            !(data_page->flags & RT_VDSO_FLAG_REALTIME_VALID))
+        {
+            return -ENOSYS;
+        }
         base_time = data_page->base_time[index];
         last = data_page->counter_last;
         freq = data_page->counter_freq;

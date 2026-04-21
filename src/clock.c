@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2024 RT-Thread Development Team
+ * Copyright (c) 2006-2026, RT-Thread Development Team
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -77,7 +77,7 @@ RTM_EXPORT(rt_tick_get);
  * @brief    This function will return delta tick from base.
  *
  * @param    base to consider
- * 
+ *
  * @return   Return delta tick.
  */
 rt_tick_t rt_tick_get_delta(rt_tick_t base)
@@ -259,3 +259,4 @@ rt_weak rt_tick_t rt_tick_get_millisecond(void)
 }
 
 /**@}*/
+
