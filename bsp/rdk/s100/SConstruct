@@ -26,7 +26,53 @@ Export('RTT_ROOT')
 Export('rtconfig')
 
 # prepare building environment
-objs = PrepareBuilding(env, RTT_ROOT, has_libcpu=True)
+objs = PrepareBuilding(env, RTT_ROOT)
+
+def _replace_cortex_r52_with_startup(objects):
+    startup_dir = os.path.join(Dir('#').abspath, 'startup')
+    startup_names = set(
+        name for name in os.listdir(startup_dir)
+        if os.path.isfile(os.path.join(startup_dir, name))
+    )
+    cpu_dir = os.path.abspath(os.path.join(RTT_ROOT, 'libcpu', 'arm', 'cortex-r52'))
+
+    def _source_path(node):
+        for attr in ('srcnode', 'rfile'):
+            if hasattr(node, attr):
+                source = getattr(node, attr)()
+                if hasattr(source, 'abspath'):
+                    return os.path.abspath(source.abspath)
+        if hasattr(node, 'abspath'):
+            return os.path.abspath(node.abspath)
+        return None
+
+    def _filter(items):
+        filtered = []
+        for item in items:
+            if isinstance(item, list):
+                filtered.append(_filter(item))
+                continue
+
+            if not hasattr(item, 'abspath'):
+                filtered.append(item)
+                continue
+
+            item_path = _source_path(item)
+            if item_path is None:
+                filtered.append(item)
+                continue
+
+            item_name = os.path.basename(item_path)
+            if item_name in startup_names and item_path.startswith(cpu_dir + os.sep):
+                continue
+
+            filtered.append(item)
+
+        return filtered
+
+    return _filter(objects)
+
+objs = _replace_cortex_r52_with_startup(objs)
 
 # make a building
 DoBuilding(TARGET, objs)

@@ -18,6 +18,14 @@ extern char OS_HEAP_END_ADDR;
 #error "GCC support only!"
 #endif
 
+#ifndef __DSB
+#define __DSB() __asm volatile ("dsb" : : : "memory")
+#endif
+
+#ifndef __ISB
+#define __ISB() __asm volatile ("isb" : : : "memory")
+#endif
+
 /***********************************************************************************************************************
  * GIC definitions
  **********************************************************************************************************************/
