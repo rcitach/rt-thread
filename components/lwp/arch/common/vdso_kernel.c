@@ -33,9 +33,9 @@ enum rt_vdso_binary_id
 
 struct rt_vdso_binary_info
 {
-    const char   *name;
-    const char   *image_start;
-    const char   *image_end;
+    const char *name;
+    const char *image_start;
+    const char *image_end;
     unsigned long page_count;
 };
 
@@ -47,15 +47,16 @@ static struct rt_vdso_binary_info rt_vdso_binaries[] = {
     },
 };
 
-static union {
+static union
+{
     struct rt_vdso_data_page data_page;
-    uint8_t                  raw[RT_VDSO_DATA_PAGE_COUNT * ARCH_PAGE_SIZE];
+    uint8_t raw[RT_VDSO_DATA_PAGE_COUNT * ARCH_PAGE_SIZE];
 } rt_vdso_data_page_store RT_VDSO_DATA_PAGE_ALIGNED;
 struct rt_vdso_data_page *rt_vdso_kernel_data_page = &rt_vdso_data_page_store.data_page;
 static int rt_vdso_runtime_status = RT_EOK;
 
 static struct timespec rt_vdso_realtime_offset;
-static rt_bool_t       rt_vdso_realtime_offset_ready;
+static rt_bool_t rt_vdso_realtime_offset_ready;
 
 #ifndef MMU_MAP_U_ROCB
 #define MMU_MAP_U_ROCB MMU_MAP_U_RWCB
@@ -113,8 +114,8 @@ static struct timespec rt_vdso_add_timespec(const struct timespec *lhs,
 }
 
 static int rt_vdso_read_monotonic_snapshot(struct timespec *monotonic_time,
-                                           rt_uint64_t     *counter_value,
-                                           rt_uint64_t     *counter_freq)
+                                           rt_uint64_t *counter_value,
+                                           rt_uint64_t *counter_freq)
 {
     *counter_value = rt_clock_time_get_counter();
     *counter_freq = rt_clock_time_get_freq();
@@ -129,8 +130,8 @@ static int rt_vdso_read_monotonic_snapshot(struct timespec *monotonic_time,
 }
 
 static void rt_vdso_store_clock_snapshot(const struct timespec *monotonic_time,
-                                         rt_uint64_t            counter_value,
-                                         rt_uint64_t            counter_freq)
+                                         rt_uint64_t counter_value,
+                                         rt_uint64_t counter_freq)
 {
     rt_vdso_kernel_data_page->counter_last = counter_value;
     rt_vdso_kernel_data_page->counter_freq = counter_freq;
@@ -190,10 +191,10 @@ static void *rt_vdso_map_physical_pages(struct rt_lwp *lwp, void *user_va,
 
 
 static int rt_vdso_map_binary_pages(enum rt_vdso_binary_id binary_id,
-                                    struct rt_lwp       *lwp)
+                                    struct rt_lwp *lwp)
 {
-    void         *data_page_base = RT_NULL;
-    void         *image_base = RT_NULL;
+    void *data_page_base = RT_NULL;
+    void *image_base = RT_NULL;
     unsigned long data_page_len;
     unsigned long image_len;
 

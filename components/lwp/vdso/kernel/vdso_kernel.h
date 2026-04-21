@@ -22,9 +22,9 @@ extern "C" {
 extern char __rt_vdso_image_start[];
 extern char __rt_vdso_image_end[];
 
-#define RT_VDSO_IMAGE_ELF_MAGIC "\177ELF"
+#define RT_VDSO_IMAGE_ELF_MAGIC     "\177ELF"
 #define RT_VDSO_IMAGE_ELF_MAGIC_LEN 4
-#define RT_VDSO_DATA_PAGE_ALIGNED \
+#define RT_VDSO_DATA_PAGE_ALIGNED                   \
     __attribute__((section(".data.vdso.datapage"))) \
     __attribute__((aligned(RT_VDSO_PAGE_SIZE)))
 

@@ -20,21 +20,18 @@ extern "C" {
 
 extern struct rt_vdso_data_page *rt_vdso_kernel_data_page;
 
-rt_inline
-struct rt_vdso_data_page *rt_vdso_get_kernel_data_page(void)
+rt_inline struct rt_vdso_data_page *rt_vdso_get_kernel_data_page(void)
 {
     return rt_vdso_kernel_data_page;
 }
 
-rt_inline
-void rt_vdso_data_page_write_begin(struct rt_vdso_data_page *data_page)
+rt_inline void rt_vdso_data_page_write_begin(struct rt_vdso_data_page *data_page)
 {
     rt_atomic_add(&data_page->seq_counter, 1);
     rt_hw_dmb();
 }
 
-rt_inline
-void rt_vdso_data_page_write_end(struct rt_vdso_data_page *data_page)
+rt_inline void rt_vdso_data_page_write_end(struct rt_vdso_data_page *data_page)
 {
     rt_hw_dmb();
     rt_atomic_add(&data_page->seq_counter, 1);

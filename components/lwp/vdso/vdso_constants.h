@@ -20,11 +20,14 @@ extern "C" {
 #define RT_VDSO_PAGE_SIZE       (1 << RT_VDSO_PAGE_SHIFT)
 
 #ifndef read_barrier_depends
-#define read_barrier_depends()      do { } while (0)
+#define read_barrier_depends() \
+    do                         \
+    {                          \
+    } while (0)
 #endif
 
 #ifndef smp_read_barrier_depends
-#define smp_read_barrier_depends()  read_barrier_depends()
+#define smp_read_barrier_depends() read_barrier_depends()
 #endif
 
 #if defined(__aarch64__)

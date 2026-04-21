@@ -7,7 +7,7 @@
 #define RT_STRINGIFY(x...)   __RT_STRINGIFY(x)
 
 #define rt_vdso_arch_barrier(cmd, ...) \
-    __asm__ volatile(RT_STRINGIFY(cmd) " " RT_STRINGIFY(__VA_ARGS__) ::: "memory")
+    __asm__ volatile(RT_STRINGIFY(cmd) " " RT_STRINGIFY(__VA_ARGS__)::: "memory")
 
 static inline uint64_t rt_vdso_arch_read_counter(void)
 {

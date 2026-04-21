@@ -32,10 +32,10 @@ enum rt_vdso_clock_data_index
 
 struct rt_vdso_data_page
 {
-    uint32_t        seq_counter;
-    uint32_t        flags;
-    uint64_t        counter_last;
-    uint64_t        counter_freq;
+    uint32_t seq_counter;
+    uint32_t flags;
+    uint64_t counter_last;
+    uint64_t counter_freq;
     struct timespec base_time[RT_VDSO_CLOCK_DATA_COUNT];
 };
 

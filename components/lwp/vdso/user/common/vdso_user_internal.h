@@ -51,15 +51,15 @@ static inline void rt_vdso_read_once_size(const volatile void *ptr, void *dst, i
     }
 }
 
-#define READ_ONCE(x)                                                        \
-    ({                                                                      \
-        union                                                               \
-        {                                                                   \
-            typeof(x) value;                                                \
-            char bytes[sizeof(x)];                                          \
-        } once;                                                             \
-        rt_vdso_read_once_size(&(x), once.bytes, sizeof(x));                \
-        once.value;                                                         \
+#define READ_ONCE(x)                                         \
+    ({                                                       \
+        union                                                \
+        {                                                    \
+            typeof(x) value;                                 \
+            char bytes[sizeof(x)];                           \
+        } once;                                              \
+        rt_vdso_read_once_size(&(x), once.bytes, sizeof(x)); \
+        once.value;                                          \
     })
 
 extern const struct rt_vdso_data_page __rt_vdso_data_page[] __attribute__((visibility("hidden")));
@@ -83,7 +83,7 @@ static inline uint32_t rt_vdso_data_read_begin(const struct rt_vdso_data_page *d
 }
 
 static inline uint32_t rt_vdso_data_read_retry(const struct rt_vdso_data_page *data_page,
-                                               uint32_t                        start)
+                                               uint32_t start)
 {
     rt_vdso_arch_rmb();
     return READ_ONCE(data_page->seq_counter) != start;
