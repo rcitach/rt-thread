@@ -30,7 +30,6 @@ extern char __rt_vdso_image_end[];
 
 int rt_vdso_map_process_image(struct rt_lwp *lwp);
 void rt_vdso_sync_clock_data(void);
-void rt_vdso_sync_realtime(void);
 void rt_vdso_set_realtime(const struct timespec *realtime);
 
 #ifdef __cplusplus
