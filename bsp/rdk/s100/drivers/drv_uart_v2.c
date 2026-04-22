@@ -439,10 +439,12 @@ static rt_err_t s100_uart_configure(struct rt_serial_device *serial,
     {
         ret = s100_uart_set_baud(uart, cfg->baud_rate);
     }
+
     if (ret == RT_EOK)
     {
         ret = s100_uart_set_lcr(uart, cfg);
     }
+
     if (ret == RT_EOK)
     {
         s100_uart_set_fifo(uart);
@@ -592,3 +594,4 @@ int rt_hw_uart_init(void)
 INIT_BOARD_EXPORT(rt_hw_uart_init);
 
 #endif /* RT_USING_SERIAL_V2 */
+
