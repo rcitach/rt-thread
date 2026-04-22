@@ -12,7 +12,10 @@ src     = Glob('kernel/*.c') + Glob('kernel/*.S')
 if not GetDepend(['RT_USING_VDSO']):
     Return('group')
 
-if rtconfig.ARCH != "aarch64" and rtconfig.ARCH != "risc-v":
+if rtconfig.ARCH != "aarch64" and rtconfig.ARCH != "risc-v" and rtconfig.ARCH != "arm":
+    # not supported arch
+    src = []
+elif rtconfig.ARCH == "arm" and rtconfig.CPU != "cortex-a":
     # not supported arch
     src = []
 else:

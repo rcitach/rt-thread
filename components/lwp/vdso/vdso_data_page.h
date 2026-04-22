@@ -22,7 +22,7 @@ extern "C" {
 
 #define RT_VDSO_CLOCK_ID_MAX 16
 #define RT_VDSO_NSEC_PER_SEC 1000000000ULL
-#define RT_VDSO_FLAG_REALTIME_VALID (1U << 0)
+#define RT_VDSO_FLAG_REALTIME_VALID (1ULL << 0)
 
 enum rt_vdso_clock_data_index
 {
@@ -34,7 +34,8 @@ enum rt_vdso_clock_data_index
 struct rt_vdso_data_page
 {
     uint32_t seq_counter;
-    uint32_t flags;
+    uint32_t reserved0;
+    uint64_t flags;
     uint64_t counter_last;
     uint64_t counter_freq;
     struct timespec base_time[RT_VDSO_CLOCK_DATA_COUNT];

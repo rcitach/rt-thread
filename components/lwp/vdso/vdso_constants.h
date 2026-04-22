@@ -32,6 +32,8 @@ extern "C" {
 
 #if defined(__aarch64__)
 #define RT_VDSO_IMAGE_PATH "../user/build/aarch64/libvdso.so"
+#elif defined(__arm__)
+#define RT_VDSO_IMAGE_PATH "../user/build/arm/libvdso.so"
 #elif defined(__riscv)
 #define RT_VDSO_IMAGE_PATH "../user/build/risc-v/libvdso.so"
 #else

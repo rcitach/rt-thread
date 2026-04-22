@@ -53,6 +53,7 @@ static union
     uint8_t raw[RT_VDSO_DATA_PAGE_COUNT * ARCH_PAGE_SIZE];
 } rt_vdso_data_page_store RT_VDSO_DATA_PAGE_ALIGNED;
 struct rt_vdso_data_page *rt_vdso_kernel_data_page = &rt_vdso_data_page_store.data_page;
+RT_DEFINE_HW_SPINLOCK(rt_vdso_data_page_lock);
 static int rt_vdso_runtime_status = RT_EOK;
 
 static struct timespec rt_vdso_realtime_offset;
@@ -143,7 +144,7 @@ static int rt_vdso_read_monotonic_snapshot(struct timespec *monotonic_time,
 
 static void rt_vdso_update_data_page_flags(void)
 {
-    rt_uint32_t flags = 0;
+    rt_uint64_t flags = 0;
 
     if (rt_vdso_realtime_offset_ready)
     {
@@ -188,11 +189,13 @@ void rt_vdso_set_realtime(const struct timespec *realtime)
         return;
     }
 
+    rt_hw_spin_lock(&rt_vdso_data_page_lock);
     rt_vdso_data_page_write_begin(rt_vdso_kernel_data_page);
     rt_vdso_realtime_offset = rt_vdso_timespec_subtract(realtime, &monotonic);
     rt_vdso_realtime_offset_ready = RT_TRUE;
     rt_vdso_store_clock_snapshot(&monotonic, counter, freq);
     rt_vdso_data_page_write_end(rt_vdso_kernel_data_page);
+    rt_hw_spin_unlock(&rt_vdso_data_page_lock);
 }
 
 static void *rt_vdso_map_physical_pages(struct rt_lwp *lwp, void *user_va,
@@ -309,9 +312,11 @@ void rt_vdso_sync_clock_data(void)
         return;
     }
 
+    rt_hw_spin_lock(&rt_vdso_data_page_lock);
     rt_vdso_data_page_write_begin(rt_vdso_kernel_data_page);
     rt_vdso_store_clock_snapshot(&monotonic, counter, freq);
     rt_vdso_data_page_write_end(rt_vdso_kernel_data_page);
+    rt_hw_spin_unlock(&rt_vdso_data_page_lock);
 }
 
 static int rt_vdso_validate_image(void)

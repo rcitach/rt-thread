@@ -11,6 +11,11 @@ arch_def_config = {
         'device': '-march=armv8-a -mtune=cortex-a53',
         'linker': os.path.join(user_dir, 'arch', 'aarch64', 'vdso.lds.S'),
     },
+    'arm': {
+        'prefix': 'arm-none-eabi-',
+        'device': '-march=armv7-a -marm',
+        'linker': os.path.join(user_dir, 'arch', 'arm', 'vdso.lds.S'),
+    },
     'risc-v': {
         'prefix': 'riscv64-none-elf-',
         'device': '-march=rv64imafdc -mabi=lp64',
