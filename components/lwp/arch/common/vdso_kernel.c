@@ -102,6 +102,27 @@ static void rt_vdso_counter_to_timespec(rt_uint64_t counter_value,
     ts->tv_nsec = monotonic_ns % RT_VDSO_NSEC_PER_SEC;
 }
 
+static rt_uint64_t rt_vdso_read_arch_counter(void)
+{
+    rt_uint64_t counter;
+
+#if defined(__aarch64__)
+    __asm__ volatile("mrs %0, CNTVCT_EL0" : "=r"(counter));
+#elif defined(__arm__)
+    rt_uint32_t lo;
+    rt_uint32_t hi;
+
+    __asm__ volatile("mrrc p15, 1, %0, %1, c14" : "=r"(lo), "=r"(hi));
+    counter = ((rt_uint64_t)hi << 32) | lo;
+#elif defined(__riscv)
+    __asm__ volatile("rdtime %0" : "=r"(counter));
+#else
+    counter = rt_clock_time_get_counter();
+#endif
+
+    return counter;
+}
+
 static struct timespec rt_vdso_timespec_subtract(const struct timespec *lhs,
                                                  const struct timespec *rhs)
 {
@@ -130,14 +151,18 @@ static int rt_vdso_read_monotonic_snapshot(struct timespec *monotonic_time,
                                            rt_uint64_t *counter_value,
                                            rt_uint64_t *counter_freq)
 {
-    *counter_value = rt_clock_time_get_counter();
+    rt_uint64_t monotonic_counter;
+
+    monotonic_counter = rt_clock_time_get_counter();
     *counter_freq = rt_clock_time_get_freq();
     if (*counter_freq == 0)
     {
         return -RT_ERROR;
     }
 
-    rt_vdso_counter_to_timespec(*counter_value, monotonic_time);
+    /* User vDSO computes deltas from the raw architecture counter. */
+    *counter_value = rt_vdso_read_arch_counter();
+    rt_vdso_counter_to_timespec(monotonic_counter, monotonic_time);
 
     return RT_EOK;
 }
@@ -319,45 +344,98 @@ void rt_vdso_sync_clock_data(void)
     rt_hw_spin_unlock(&rt_vdso_data_page_lock);
 }
 
+static int rt_vdso_validate_elf_header(const void *image)
+{
+    const unsigned char *ident = (const unsigned char *)image;
+
+#if defined(__aarch64__)
+    const Elf64_Ehdr *ehdr = (const Elf64_Ehdr *)image;
+
+    if (ident[EI_CLASS] != ELFCLASS64)
+    {
+        LOG_E("vDSO ELF class mismatch: expect ELF64");
+        return -RT_ERROR;
+    }
+
+    if (ehdr->e_type != ET_DYN)
+    {
+        LOG_E("vDSO ELF type mismatch!");
+        return -RT_ERROR;
+    }
+
+    if (ehdr->e_machine != EM_AARCH64)
+    {
+        LOG_E("vDSO machine mismatch: expect AArch64");
+        return -RT_ERROR;
+    }
+#elif defined(__arm__)
+    const Elf32_Ehdr *ehdr = (const Elf32_Ehdr *)image;
+
+    if (ident[EI_CLASS] != ELFCLASS32)
+    {
+        LOG_E("vDSO ELF class mismatch: expect ELF32");
+        return -RT_ERROR;
+    }
+
+    if (ehdr->e_type != ET_DYN)
+    {
+        LOG_E("vDSO ELF type mismatch!");
+        return -RT_ERROR;
+    }
+
+    if (ehdr->e_machine != EM_ARM)
+    {
+        LOG_E("vDSO machine mismatch: expect ARM");
+        return -RT_ERROR;
+    }
+#elif defined(__riscv)
+    const Elf64_Ehdr *ehdr = (const Elf64_Ehdr *)image;
+
+    if (ident[EI_CLASS] != ELFCLASS64)
+    {
+        LOG_E("vDSO ELF class mismatch: expect ELF64");
+        return -RT_ERROR;
+    }
+
+    if (ehdr->e_type != ET_DYN)
+    {
+        LOG_E("vDSO ELF type mismatch!");
+        return -RT_ERROR;
+    }
+
+    if (ehdr->e_machine != EM_RISCV)
+    {
+        LOG_E("vDSO machine mismatch: expect RISC-V");
+        return -RT_ERROR;
+    }
+#else
+    LOG_E("vDSO unsupported architecture!");
+    return -RT_ERROR;
+#endif
+
+    return RT_EOK;
+}
+
 static int rt_vdso_validate_image(void)
 {
-    const Elf64_Ehdr *ehdr =
-        (const Elf64_Ehdr *)rt_vdso_binaries[RT_VDSO_BINARY_COMMON].image_start;
+    const void *image = rt_vdso_binaries[RT_VDSO_BINARY_COMMON].image_start;
 
     rt_memset(rt_vdso_data_page_store.raw, 0, sizeof(rt_vdso_data_page_store.raw));
     rt_vdso_realtime_offset_ready = RT_FALSE;
     rt_memset(&rt_vdso_realtime_offset, 0, sizeof(rt_vdso_realtime_offset));
 
-    if (rt_memcmp(rt_vdso_binaries[RT_VDSO_BINARY_COMMON].image_start,
-                  RT_VDSO_IMAGE_ELF_MAGIC, RT_VDSO_IMAGE_ELF_MAGIC_LEN))
+    if (rt_memcmp(image, RT_VDSO_IMAGE_ELF_MAGIC, RT_VDSO_IMAGE_ELF_MAGIC_LEN))
     {
         LOG_E("vDSO is not a valid ELF object!");
         rt_vdso_runtime_status = -RT_ERROR;
         return -RT_ERROR;
     }
 
-    if (ehdr->e_ident[EI_CLASS] != ELFCLASS64 || ehdr->e_type != ET_DYN)
+    if (rt_vdso_validate_elf_header(image) != RT_EOK)
     {
-        LOG_E("vDSO ELF class/type mismatch!");
         rt_vdso_runtime_status = -RT_ERROR;
         return -RT_ERROR;
     }
-
-#if defined(__aarch64__)
-    if (ehdr->e_machine != EM_AARCH64)
-    {
-        LOG_E("vDSO machine mismatch: expect AArch64");
-        rt_vdso_runtime_status = -RT_ERROR;
-        return -RT_ERROR;
-    }
-#elif defined(__riscv)
-    if (ehdr->e_machine != EM_RISCV)
-    {
-        LOG_E("vDSO machine mismatch: expect RISC-V");
-        rt_vdso_runtime_status = -RT_ERROR;
-        return -RT_ERROR;
-    }
-#endif
 
     rt_vdso_binaries[RT_VDSO_BINARY_COMMON].page_count =
         (rt_vdso_binaries[RT_VDSO_BINARY_COMMON].image_end -
