@@ -7,7 +7,7 @@
  * Date           Author         Notes
  * 2024-07-04     rcitach        init ver.
  * 2025-04-22     ScuDays        Add VDSO functionality under the riscv64 architecture.
- * 2026-04-21     rcitach         Refactor vDSO runtime around the clock data page.
+ * 2026-04-21     rcitach        Refactor vDSO runtime around the clock data page.
  */
 
 #include <rtthread.h>
@@ -59,20 +59,14 @@ static int rt_vdso_runtime_status = RT_EOK;
 static struct timespec rt_vdso_realtime_offset;
 static rt_bool_t rt_vdso_realtime_offset_ready;
 
-#ifndef MMU_MAP_U_ROCB
-#define MMU_MAP_U_ROCB MMU_MAP_U_RWCB
-#endif
-
-#ifndef MMU_MAP_U_RWCB_XN
-#define MMU_MAP_U_RWCB_XN MMU_MAP_U_RWCB
-#endif
-
 #ifdef MMU_MAP_U_ROCB_XN
 #define RT_VDSO_DATA_PAGE_ATTR MMU_MAP_U_ROCB_XN
-#elif defined(MMU_MAP_U_RWCB_XN)
-#define RT_VDSO_DATA_PAGE_ATTR MMU_MAP_U_RWCB_XN
-#else
+
+#elif defined(MMU_MAP_U_ROCB)
 #define RT_VDSO_DATA_PAGE_ATTR MMU_MAP_U_ROCB
+
+#else
+#error "No user-read-only mapping available for vDSO data page!"
 #endif
 
 #define RT_VDSO_IMAGE_PAGE_ATTR MMU_MAP_U_ROCB
