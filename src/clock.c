@@ -161,6 +161,10 @@ void rt_tick_increase(void)
     }
 #endif
     rt_timer_check();
+
+#ifdef RT_USING_VDSO
+    rt_vdso_sync_clock_data();
+#endif
 }
 
 /**
@@ -195,10 +199,6 @@ void rt_tick_increase_tick(rt_tick_t tick)
     }
 #endif
     rt_timer_check();
-
-#ifdef RT_USING_VDSO
-    rt_vdso_sync_clock_data();
-#endif
 }
 
 /**
