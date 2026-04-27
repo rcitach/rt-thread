@@ -1,3 +1,14 @@
+/*
+ * Copyright (c) 2006-2026, RT-Thread Development Team
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Change Logs:
+ * Date           Author         Notes
+ * 2024-07-04     rcitach        init ver.
+ * 2026-04-27     rcitach        Update the header file
+ */
+
 #include <vdso_constants.h>
 
 OUTPUT_FORMAT("elf64-littleaarch64", "elf64-littleaarch64", "elf64-littleaarch64")
