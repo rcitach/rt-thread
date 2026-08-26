@@ -142,6 +142,11 @@
 /* DFS: device virtual file system */
 
 /* end of DFS: device virtual file system */
+#define RT_USING_FAL
+#define FAL_USING_DEBUG
+#define FAL_PART_HAS_TABLE_CFG
+#define FAL_DEV_NAME_MAX 24
+#define FAL_DEV_BLK_MAX 6
 
 /* Device Drivers */
 
@@ -430,6 +435,7 @@
 
 /* On-chip Peripheral Port */
 
+#define BSP_USING_OSPI_FLASH
 /* end of On-chip Peripheral Port */
 /* end of Hardware Drivers Config */
 
