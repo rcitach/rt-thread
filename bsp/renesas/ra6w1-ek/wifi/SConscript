@@ -1,0 +1,210 @@
+import os
+
+from building import *
+
+Import('RTT_ROOT')
+Import('rtconfig')
+
+cwd = GetCurrentDir()
+bsp_root = os.path.dirname(cwd)
+wrapper_root = os.path.join(bsp_root, 'packages', 'FreeRTOS_Wrapper-latest', 'FreeRTOS')
+
+
+def collect_c(root):
+    result = []
+    for current, dirs, files in os.walk(root):
+        dirs.sort()
+        for name in sorted(files):
+            if name.endswith('.c'):
+                result.append(os.path.join(current, name))
+    return result
+
+
+def collect_dirs(root):
+    result = []
+    for current, dirs, files in os.walk(root):
+        result.append(current)
+    return result
+
+
+platform_roots = [
+    os.path.join(cwd, 'platform', 'rm_wifi'),
+    os.path.join(cwd, 'platform', 'rm_lwip_w'),
+    os.path.join(cwd, 'platform', 'rm_mbedtls'),
+    os.path.join(cwd, 'platform', 'rm_psa_crypto_w'),
+    os.path.join(cwd, 'platform', 'r_cc312_openable_w'),
+    os.path.join(cwd, 'platform', 'rm_watchdog_service_w'),
+    os.path.join(cwd, 'platform', 'rm_vee_flash_w'),
+    os.path.join(cwd, 'platform', 'rm_map_persistant_w'),
+    os.path.join(cwd, 'platform', 'rm_block_media_spi_w'),
+    os.path.join(cwd, 'platform', 'rm_comms_lock'),
+    os.path.join(cwd, 'platform', 'rm_comms_uart_w'),
+]
+
+src_platform = [
+    os.path.join(cwd, 'platform', 'wifi_instances.c'),
+    os.path.join(cwd, 'platform', 'rtos_compat.c'),
+    os.path.join(cwd, 'platform', 'rom', 'rom_api_veneers.S'),
+]
+for root in platform_roots:
+    for source in collect_c(root):
+        # RT-Thread supplies lwIP core, sys_arch and memory management. The
+        # vendor rm_lwip_w directory is added below as a small adapter set.
+        if os.path.basename(root) == 'rm_lwip_w':
+            continue
+        relative = os.path.relpath(source, root)
+        if os.path.basename(root) == 'rm_wifi' and relative.startswith('user_app' + os.sep):
+            continue
+        src_platform.append(source)
+
+# These are the SDK files used by the original RA6W1 Wi-Fi build. OTA and
+# command-line application sources are intentionally outside this first port.
+sdk_root = os.path.join(cwd, 'supplicant', 'sdk')
+src_sdk = [
+    os.path.join(sdk_root, 'bsp', 'system', 'sys_man', 'sys_clock_mgr_da1640x.c'),
+    os.path.join(sdk_root, 'interfaces', 'wifi', 'ptimg', 'ptim.c'),
+    os.path.join(sdk_root, 'interfaces', 'wifi', 'ptimg', 'ptim_loader.c'),
+    os.path.join(sdk_root, 'interfaces', 'wifi', 'stack', 'wpa_cli', 'wpa_cli.c'),
+    os.path.join(sdk_root, 'interfaces', 'wifi', 'stack', 'wpa_cli', 'wpa_ctrl.c'),
+    os.path.join(sdk_root, 'interfaces', 'wifi', 'system', 'src', 'common', 'ra6w1_retarget.c'),
+    os.path.join(sdk_root, 'interfaces', 'wifi', 'system', 'src', 'common', 'util_api.c'),
+    os.path.join(sdk_root, 'middleware', 'osal', 'msg_queues.c'),
+]
+src_sdk += collect_c(os.path.join(sdk_root, 'interfaces', 'wifi', 'stack', 'supplicant'))
+
+# Only the WiFi netif and the vendor network-management glue are retained.
+# The lwIP core and FreeRTOS sys_arch are provided by RT-Thread.
+lwip_root = os.path.join(cwd, 'platform', 'rm_lwip_w')
+src_wifi_lwip = [
+    os.path.join(lwip_root, 'rm_lwip_w_helper.c'),
+    os.path.join(lwip_root, 'rtthread_lwip_compat.c'),
+    os.path.join(lwip_root, 'network', 'net_arp.c'),
+    os.path.join(lwip_root, 'network', 'net_common.c'),
+    os.path.join(lwip_root, 'network', 'net_dhcp_client.c'),
+    os.path.join(lwip_root, 'network', 'net_dhcp_server.c'),
+    os.path.join(lwip_root, 'network', 'net_dns_client.c'),
+    os.path.join(lwip_root, 'network', 'net_ip_handler.c'),
+    os.path.join(lwip_root, 'network', 'net_network_main.c'),
+    os.path.join(lwip_root, 'network', 'net_ping.c'),
+    os.path.join(lwip_root, 'network', 'net_sntp_client.c'),
+    os.path.join(lwip_root, 'network', 'net_stack_init.c'),
+    os.path.join(lwip_root, 'network', 'net_wifi_monitor.c'),
+    os.path.join(lwip_root, 'network', 'user_dpm.c'),
+    os.path.join(lwip_root, 'ext', 'rm_dhcp.c'),
+    os.path.join(lwip_root, 'ext', 'rm_etharp.c'),
+    os.path.join(lwip_root, 'apps', 'dhcpserver', 'dhcpserver.c'),
+    os.path.join(lwip_root, 'apps', 'ping', 'ping.c'),
+    os.path.join(lwip_root, 'apps', 'sntp', 'sntp.c'),
+    # This is the WiFi driver-facing netif adapter. It uses RT-Thread lwIP
+    # headers, while keeping the original driver event contract.
+    os.path.join(cwd, 'platform', 'rm_lwip_w', 'netif', 'ethernetif.c'),
+]
+src_crypto = collect_c(os.path.join(cwd, 'crypto', 'mbedtls', 'library'))
+src_rtos_hal = collect_c(os.path.join(bsp_root, 'ra', 'fsp', 'src', 'r_rtc_w'))
+src_rtos_hal += collect_c(os.path.join(bsp_root, 'ra', 'fsp', 'src', 'r_wdog_w'))
+src_app = [os.path.join(cwd, 'app', 'wifi_app.c')]
+
+include_roots = [
+    os.path.join(cwd, 'config'),
+    os.path.join(cwd, 'os'),
+    os.path.join(cwd, 'platform', 'fsp_inc'),
+    os.path.join(cwd, 'platform', 'fsp_inc', 'api'),
+    os.path.join(cwd, 'platform', 'fsp_inc', 'api'),
+    os.path.join(cwd, 'platform', 'fsp_inc', 'instances'),
+    os.path.join(RTT_ROOT, 'components', 'net', 'lwip', 'port'),
+    os.path.join(RTT_ROOT, 'components', 'net', 'lwip', 'lwip-2.1.2', 'src', 'include'),
+    os.path.join(RTT_ROOT, 'components', 'net', 'lwip', 'lwip-2.1.2', 'src', 'include', 'netif'),
+    # WiFi-specific lwIP application declarations (ping/dhcpserver), not
+    # the vendor lwIP core headers.
+    os.path.join(cwd, 'protocol', 'lwip', 'src', 'include', 'lwip', 'apps'),
+    os.path.join(lwip_root, 'network', 'include'),
+    os.path.join(lwip_root, 'ext', 'inc'),
+    os.path.join(lwip_root, 'apps', 'include'),
+    os.path.join(lwip_root, 'apps', 'dhcpserver'),
+    os.path.join(lwip_root, 'apps', 'ping'),
+    os.path.join(lwip_root, 'apps', 'sntp'),
+    os.path.join(cwd, 'crypto', 'mbedtls', 'include'),
+    os.path.join(cwd, 'crypto', 'mbedtls', 'include', 'mbedtls'),
+    os.path.join(cwd, 'crypto', 'mbedtls', 'include', 'psa'),
+    os.path.join(cwd, 'crypto', 'mbedtls'),
+    os.path.join(cwd, 'crypto', 'mbedtls', 'library'),
+    os.path.join(cwd, 'supplicant', 'sdk'),
+    os.path.join(wrapper_root, 'include', 'freertos'),
+    os.path.join(wrapper_root, 'include'),
+    os.path.join(wrapper_root, 'portable', 'rt-thread'),
+    os.path.join(bsp_root, 'ra', 'fsp', 'inc'),
+    os.path.join(bsp_root, 'ra', 'fsp', 'inc', 'api'),
+    os.path.join(bsp_root, 'ra', 'fsp', 'inc', 'instances'),
+    os.path.join(bsp_root, 'ra', 'fsp', 'src', 'bsp_w', 'cmsis', 'Device', 'RENESAS', 'Include'),
+    os.path.join(bsp_root, 'ra', 'fsp', 'src', 'bsp_w', 'mcu', 'all'),
+    os.path.join(bsp_root, 'ra', 'fsp', 'src', 'bsp_w', 'mcu', 'ra6w1'),
+    os.path.join(bsp_root, 'ra', 'fsp', 'src', 'bsp_w', 'mcu', 'ra6w1', 'config'),
+    os.path.join(bsp_root, 'ra', 'fsp', 'src', 'bsp_w', 'mcu', 'ra6w1', 'config', 'include'),
+    os.path.join(bsp_root, 'ra', 'fsp', 'src', 'bsp', 'cmsis', 'Device', 'RENESAS', 'Include'),
+    os.path.join(bsp_root, 'ra', 'fsp', 'src', 'bsp', 'mcu', 'all'),
+    os.path.join(bsp_root, 'rafw_cfg', 'fsp_cfg'),
+    os.path.join(bsp_root, 'rafw_cfg', 'fsp_cfg', 'bsp'),
+    os.path.join(bsp_root, 'rafw_cfg', 'arm'),
+]
+
+for root in [
+    os.path.join(cwd, 'platform', 'fsp_inc'),
+    os.path.join(cwd, 'platform', 'rm_wifi'),
+    os.path.join(cwd, 'platform', 'rm_mbedtls'),
+    os.path.join(cwd, 'platform', 'rm_psa_crypto_w'),
+    os.path.join(cwd, 'platform', 'r_cc312_openable_w'),
+    os.path.join(cwd, 'supplicant', 'sdk'),
+]:
+    include_roots += collect_dirs(root)
+
+include_roots += [
+    os.path.join(lwip_root, 'network'),
+    os.path.join(lwip_root, 'network', 'include'),
+    os.path.join(lwip_root, 'ext', 'inc'),
+    os.path.join(lwip_root, 'apps', 'include'),
+    os.path.join(lwip_root, 'apps', 'dhcpserver'),
+    os.path.join(lwip_root, 'apps', 'ping'),
+    os.path.join(lwip_root, 'apps', 'sntp'),
+]
+
+# Do not add lwIP's nested compatibility directories to the global include
+# search path. Some of them contain an errno.h that would shadow newlib's
+# errno.h in unrelated BSP sources.
+include_roots = [path for path in include_roots
+                 if not path.endswith(os.path.join('osal', 'include', 'arch'))
+                 and not path.endswith(os.path.join('include', 'lwip'))
+                 and not path.endswith(os.path.join('include', 'compat', 'stdc'))]
+
+include_roots = sorted(set(include_roots))
+
+cppdefines = [
+    'PKG_FREERTOS_USING_CONFIG_H',
+    'RM_MAP_PERSISTANT_W',
+    'OS_FREERTOS',
+    'RM_LWIP_W',
+    '__SUPPORT_IPV4__',
+    '__SUPPORT_IPV6__',
+    '__SUPPORT_DHCP_SVR__',
+    '__SUPPORT_SNTP_CLIENT__',
+]
+
+cpppath = include_roots
+group = []
+group += DefineGroup('WiFiPlatform', src_platform, depend=[''], CPPPATH=cpppath, CPPDEFINES=cppdefines)
+group += DefineGroup('WiFiSDK', src_sdk, depend=[''], CPPPATH=cpppath, CPPDEFINES=cppdefines)
+group += DefineGroup('WiFiLwIPAdapter', src_wifi_lwip, depend=['RT_USING_LWIP'], CPPPATH=cpppath, CPPDEFINES=cppdefines)
+group += DefineGroup('WiFiCrypto', src_crypto, depend=[''], CPPPATH=cpppath,
+                     CPPDEFINES=cppdefines, LOCAL_CCFLAGS='-Os')
+group += DefineGroup('WiFiRTOSHal', src_rtos_hal, depend=[''], CPPPATH=cpppath, CPPDEFINES=cppdefines)
+group += DefineGroup('WiFiApp', src_app, depend=[''], CPPPATH=cpppath, CPPDEFINES=cppdefines)
+
+# The four vendor archives are kept together. libsupplicant.a is a fallback
+# for builds that disable the corresponding SDK source group; with this port
+# the source group is linked first, so duplicate archive members are not used.
+driver_libs = ['macsw', 'rwnx_drv', 'romaclib', 'supplicant', 'r_cc312_property_w']
+group += DefineGroup('WiFiDriver', [], depend=[''], CPPPATH=cpppath,
+                     CPPDEFINES=cppdefines,
+                     LIBPATH=[os.path.join(cwd, 'driver')],
+                     LIBS=driver_libs)
+
+Return('group')

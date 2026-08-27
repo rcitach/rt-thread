@@ -1,0 +1,18 @@
+/*
+* Copyright (c) 2020 - 2026 Renesas Electronics Corporation and/or its affiliates
+*
+* SPDX-License-Identifier: BSD-3-Clause
+*/
+
+#ifndef LWIP_RM_MEMP_H
+#define LWIP_RM_MEMP_H
+#include "lwip/opt.h"
+
+#include "lwip/memp.h"
+#include "lwip/sys.h"
+#include "lwip/stats.h"
+
+
+void lwip_memp_status(void);
+
+#endif /* LWIP_RM_MEMP_H */
