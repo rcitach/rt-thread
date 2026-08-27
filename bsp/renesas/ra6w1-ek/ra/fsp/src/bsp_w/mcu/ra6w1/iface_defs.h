@@ -81,6 +81,9 @@
 #define ETH0_IFACE                    2
 #define NONE_IFACE                    9
 
+/* RT-Thread's lwIP port does not register a loopback netif. */
+#define RM_WIFI_NETIF_INDEX(iface)    ((iface) + 1U)
+
 #define IFACE_UP                      1
 #define IFACE_DOWN                    0
 

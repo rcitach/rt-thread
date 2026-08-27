@@ -277,7 +277,9 @@
 //
 // Support DHCP Server on the RA6W1/RA6W2 Soft-AP mode.
 //
+#ifndef __SUPPORT_DHCP_SVR__
 #define __SUPPORT_DHCP_SVR__
+#endif
 
 //
 // Support SNTP Client feature
@@ -285,7 +287,9 @@
 // This feature enable SNTP client to get current time from the defined Internet time server.
 //
 #if (CFG_WIFI == 1)
+#ifndef __SUPPORT_SNTP_CLIENT__
  #define __SUPPORT_SNTP_CLIENT__
+#endif
 #endif
 
 //

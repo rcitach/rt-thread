@@ -35,13 +35,13 @@
 #endif
 
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-#define CFG_PMGR FSP_NOT_DEFINED
+#define CFG_PMGR (0)
 
-#define CFG_CLI (FSP_NOT_DEFINED)
+#define CFG_CLI (0)
 
-#define CFG_MBEDTLS (FSP_NOT_DEFINED)
+#define CFG_MBEDTLS (1)
 
-#define CFG_RTC_W (FSP_NOT_DEFINED)
+#define CFG_RTC_W (1)
 
 #define SUPPORT_FSP_RM_OTA_W (FSP_NOT_DEFINED)
 
@@ -69,11 +69,7 @@
             #endif
 
 #ifndef CFG_WIFI
-#if (1 == FSP_NOT_DEFINED)
-              #define CFG_WIFI (1)
-             #else
-#define CFG_WIFI (0)
-#endif
+#define CFG_WIFI (1)
 #endif
 
 #ifndef OS_FREERTOS
