@@ -5,6 +5,7 @@ BSP_DONT_REMOVE const fsp_vector_t g_vector_table[BSP_IRQ_VECTOR_MAX_ENTRIES]
 /* cppcheck-suppress-begin unknownMacro */
     BSP_PLACE_IN_SECTION(BSP_SECTION_APPLICATION_VECTORS) =
 {
+    [KDMA_IRQn] = KDMA_Handler, /* WIFI KDMA IRQ */
     [UART_IRQn] = uart_w_isr, /* UARTW IRQ (Generic interrupt) */
 #ifdef BSP_USING_UART1
     [UART2_IRQn] = uart_w_isr, /* UARTW2 IRQ (Generic interrupt) */
@@ -50,7 +51,30 @@ BSP_DONT_REMOVE const fsp_vector_t g_vector_table[BSP_IRQ_VECTOR_MAX_ENTRIES]
     [TIMER8_IRQn] = r_tim_w_generic_isr, /* TIM_W8 IRQ */
 #endif
 #endif /* BSP_USING_TIM_W */
+    [TDES_CBC_IRQn] = TDES_CBC_Handler, /* WIFI TDES CBC IRQ */
+    [PSK_SHA1_IRQn] = PSK_SHA1_Handler, /* WIFI PSK SHA1 IRQ */
+    [SYSPLL_LOCK_IRQn] = SYSPLL_Lock_Handler, /* WIFI SYSPLL lock IRQ */
+    [RTC_IF_EXTWK_IRQn] = RTC_IF_EXTWK_Handler, /* WIFI RTC external wake IRQ */
+    [RTC_IF_BLACK_IRQn] = RTC_IF_BLACK_Handler, /* WIFI RTC blackout IRQ */
+    [RTC_IF_BROWN_IRQn] = RTC_IF_BROWN_Handler, /* WIFI RTC brownout IRQ */
+    [RTC_IF_PCNT_IRQn] = RTC_IF_PCNT_Handler, /* WIFI RTC pulse-count IRQ */
+    [RTC_IF_BCF_MSR_IRQn] = RTC_IF_BCF_MSR_Handler, /* WIFI RTC bus-clock IRQ */
+    [RTC_IF_RTC_ACC_IRQn] = RTC_IF_RTC_ACC_Handler, /* WIFI RTC access IRQ */
+    [RTC_IF_EXP_IRQn] = RTC_IF_EXP_Handler, /* WIFI RTC mirror IRQ */
+    [RTC_IF_LMR_IRQn] = RTC_IF_LMR_Handler, /* WIFI RTC load-done IRQ */
+    [MRM_IRQn] = MRM_Handler, /* WIFI MRM IRQ */
+    [DCACHE_MRM_IRQn] = DCACHE_MRM_Handler, /* WIFI D-cache MRM IRQ */
+    [CC312_IRQn] = CC312_Handler, /* CryptoCell-312 IRQ */
     [GPIO_P0_IRQn] = r_ext_irq_w_isr, /* EXTIRQW P0 IRQ */
     [GPIO_P1_IRQn] = r_ext_irq_w_isr, /* EXTIRQW P1 IRQ */
+    [FPLL_LOCK_IRQn] = FPLL_Lock_Handler, /* WIFI FPLL lock IRQ */
+    [WIFI_HSU_IRQn] = hsu_isr, /* WIFI HSU IRQ */
+    [WIFI_MACTIMER_IRQn] = rxl_mpdu_isr, /* WIFI MAC timer IRQ */
+    [WIFI_MACRX_IRQn] = rxl_mpdu_isr, /* WIFI MAC RX IRQ */
+    [WIFI_MACTX_IRQn] = txl_transmit_trigger, /* WIFI MAC TX IRQ */
+    [WIFI_MACPROT_IRQn] = txl_prot_trigger, /* WIFI MAC protocol IRQ */
+    [WIFI_MACINTGEN_IRQn] = hal_machw_gen_handler, /* WIFI MAC general IRQ */
+    [WIFI_MACBCN_IRQn] = hal_machw_bcn_cancellation_handler, /* WIFI MAC beacon IRQ */
+    [WIFI_RC_IRQn] = phy_rc_isr, /* WIFI radio-controller IRQ */
 };
 /* cppcheck-suppress-end unknownMacro */

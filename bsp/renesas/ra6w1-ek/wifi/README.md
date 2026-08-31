@@ -4,17 +4,21 @@ This directory contains the Wi-Fi middleware port for the RA6W1-EK BSP.
 
 ## Directory layout
 
-- `app/`: RT-Thread startup entry. It opens MAP/VEE and starts `WIFI_On()`.
+- `app/`: minimal RT-Thread startup entry. It starts `WIFI_On()`, prints the
+  MAC address, selects station mode, and performs one scan.
 - `config/`: Wi-Fi, lwIP, mbedTLS, VEE and FreeRTOS compatibility settings.
 - `driver/`: vendor archives. The four Wi-Fi archives are `libmacsw.a`,
   `librwnx_drv.a`, `libromaclib.a` and `libsupplicant.a`. The CC312 property
   archive is also linked because the original project requires it.
 - `platform/`: Renesas Wi-Fi FSP adapters, RT-Thread ABI adapters, GPIO,
   flash, VEE, MAP, watchdog, UART and the selected Wi-Fi/lwIP glue.
-- `protocol/lwip/`: vendor lwIP declarations and reference sources. Its lwIP
-  core is not compiled by this BSP.
-- `crypto/`: mbedTLS source and configuration.
-- `supplicant/`: Wi-Fi SDK headers and source used by the port.
+- `protocol/lwip/`: vendor lwIP declarations kept for source compatibility.
+  Its lwIP core is not compiled by this BSP.
+- `crypto/`: only the mbedTLS, PSA and CC312 objects required by the WPA
+  archive are compiled; unused crypto sources are omitted.
+- `supplicant/`: Wi-Fi SDK headers plus the small PTIM/WPA adapter sources
+  used by the port. The full supplicant implementation remains in the
+  prebuilt archive.
 - `os/`: small OS compatibility headers.
 
 ## Build
@@ -33,8 +37,10 @@ RA6W1 flash image.
 ## Startup sequence
 
 `app/wifi_app.c` starts a delayed RT-Thread worker. The worker opens the
-MAP instance first; MAP opens the VEE/NVRAM service, which opens the block
-media and OSPI flash instance. It then calls `WIFI_On()`.
+Watchdog Service, calls `WIFI_On()`, reads the MAC through `WIFI_GetMAC()`,
+selects station mode, disconnects any previous connection, and calls
+`WIFI_Scan()` once. The Wi-Fi middleware opens VEE/NVRAM on demand. The
+worker then remains alive so the Wi-Fi middleware tasks continue to run.
 
 `WIFI_On()` starts the Wi-Fi driver but does not select an SSID or start an
 automatic connection. Use the public Wi-Fi API after startup, or change the
@@ -48,16 +54,16 @@ core, `sys_arch`, memory management and timeout scheduler are compiled by
 RT-Thread. The Wi-Fi port only compiles the selected adapter and network
 management files listed in `wifi/SConscript`.
 
-The vendor DHCP Server, SNTP and network-management APIs are retained where
-they are part of the Wi-Fi feature. Vendor-private lwIP extensions are
-replaced by `rtthread_lwip_compat.c`; in particular, the DHCP Server PCB is
-kept in the server module instead of adding a field to RT-Thread's `struct
-netif`. The original SDK still uses the FreeRTOS ABI for Wi-Fi driver and
-supplicant code, so `platform/rtos_compat.c` and the FreeRTOS wrapper remain
-required. This does not make the network protocol stack a FreeRTOS lwIP
-stack. No source file under RT-Thread's `components/net/lwip` is required to
-be modified: Wi-Fi-specific interface-index and interface-name compatibility
-is kept under this `wifi/` directory and in the BSP's generated `rtconfig.h`.
+Only the Wi-Fi adapter, network-interface glue, and the DHCP server helper
+needed by the selected build are compiled. Vendor SNTP, HTTP, WebSocket,
+ping, lwiperf, OTA and product application modules are not compiled. Vendor-
+private lwIP compatibility is kept under this `wifi/` directory, including
+the DHCP-server PCB storage; no field is added to RT-Thread's `struct netif`.
+The original SDK still uses the FreeRTOS ABI for the Wi-Fi driver and
+supplicant archive, so `platform/rtos_compat.c` and the FreeRTOS wrapper
+remain required. This does not make the network protocol stack a FreeRTOS
+lwIP stack. No source file under RT-Thread's `components/net/lwip` is
+modified.
 
 ## Porting boundary
 

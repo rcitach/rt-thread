@@ -27,7 +27,7 @@ extern "C" {
 #endif
 #define RRQ61XX_CUSTOM_FIXES_MANDATORY
 #define RM_LWIP_W_CLEANED                     (1)
-#define HTTPD_ENABLE_HTTPS                  (1)
+#define HTTPD_ENABLE_HTTPS                  (0)
 
 #ifdef __cplusplus
 }

@@ -56,8 +56,8 @@
 #define wificonfigACCESS_POINT_MAX_INACTIVITY   (86400)
 #define wificonfigMAX_CHANNEL_LIST              (20)
 
-/* For TCP Client application */
-#define TCP_CLIENT_APP_START                     (1)
+/* Basic Wi-Fi port: product TCP client application is disabled. */
+#define TCP_CLIENT_APP_START                     (0)
 
 /* LWIP dependency */
 #ifndef __SUPPORT_IPV4__
@@ -68,7 +68,7 @@
 #endif
 #define RRQ61XX_CUSTOM_FIXES_MANDATORY
 #define RM_LWIP_W_CLEANED			(1)
-#define HTTPD_ENABLE_HTTPS			(1)
+#define HTTPD_ENABLE_HTTPS			(0)
 #define ATCMD_IF_SUPPORT (0)
 #if (1 == (0))
             #define __OTA_UPDATE_MCU_FW__

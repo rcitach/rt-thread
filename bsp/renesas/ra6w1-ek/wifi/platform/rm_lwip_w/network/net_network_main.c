@@ -79,7 +79,7 @@
   #undef __SUPPORT_WPS_BTN__
  #endif
 
- #if defined(__SUPPORT_WPS_BTN__) && defined(__SUPPORT_WIFI_USER_GPIO__)
+ #if !defined(RA6W1_WIFI_BASIC_SCAN) && defined(__SUPPORT_WPS_BTN__) && defined(__SUPPORT_WIFI_USER_GPIO__)
   #include "rm_wifi_user_app_gpio_handle.h"
  #endif
  #if defined(SIGMA_TEST_ENABLE)

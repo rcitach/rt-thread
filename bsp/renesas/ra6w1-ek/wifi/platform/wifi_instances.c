@@ -27,7 +27,7 @@ static const rm_block_media_spi_w_extended_cfg_t g_rm_block_media0_extended_cfg 
 {
     .p_spi             = &g_wifi_ospi,
     .block_size_bytes  = 4096,
-    .block_count_total = 4,
+    .block_count_total = 512,
     .base_address      = 0x2A300000,
     .deny_implicit_erase = false,
 };

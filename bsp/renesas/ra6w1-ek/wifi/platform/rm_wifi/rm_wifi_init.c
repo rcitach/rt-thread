@@ -13,8 +13,10 @@
 #include "sys_clock_mgr.h"
 
 #include "rm_wifi_event.h"
+#if defined (__SUPPORT_SNTP_CLIENT__) && !defined(RA6W1_WIFI_BASIC_SCAN)
 #include "rm_sntp.h"
 #include "sntp.h"
+#endif
 #include "portable.h"
 #include "net_network_main.h"
 #include "util_api.h"
@@ -24,7 +26,9 @@
 #ifdef CONFIG_RTT
 #include "RTT/SEGGER_RTT.h"
 #endif
-#if (defined (__SUPPORT_WPS_BTN__) || defined (__SUPPORT_FACTORY_RESET_BTN__)) && defined(__SUPPORT_WIFI_USER_GPIO__)
+#if !defined(RA6W1_WIFI_BASIC_SCAN) && \
+    (defined (__SUPPORT_WPS_BTN__) || defined (__SUPPORT_FACTORY_RESET_BTN__)) && \
+    defined(__SUPPORT_WIFI_USER_GPIO__)
 #include "rm_wifi_user_app_gpio_handle.h"
 #endif
 
@@ -100,7 +104,9 @@ static void prvSetupHardware(void)
     /* need enable at flash boot */
     REG_SETF(CRG_TOP, CLK_AMBA_REG, PERI_CLK_ENABLE, 1);
 
-#if defined(__SUPPORT_WIFI_USER_GPIO__) && (defined (__SUPPORT_WPS_BTN__) || defined (__SUPPORT_FACTORY_RESET_BTN__))
+#if !defined(RA6W1_WIFI_BASIC_SCAN) && \
+    defined(__SUPPORT_WIFI_USER_GPIO__) && \
+    (defined (__SUPPORT_WPS_BTN__) || defined (__SUPPORT_FACTORY_RESET_BTN__))
     /* Set configuration for H/W button */
     rm_wifi_app_gpio_config_button();
 #endif /* defined(__SUPPORT_WIFI_USER_GPIO__) && ( defined (__SUPPORT_WPS_BTN__) || defined (__SUPPORT_FACTORY_RESET_BTN__)) */
@@ -624,7 +630,7 @@ static void wifi_init(void *pvParameters)
 #else
 #if defined ( __SUPPORT_FAST_CONN_SLEEP_2__ )
     if (ra6w1_network_main_get_wlaninit_mode()) {
-#if defined ( __SUPPORT_SNTP_CLIENT__ )
+#if defined ( __SUPPORT_SNTP_CLIENT__ ) && !defined(RA6W1_WIFI_BASIC_SCAN)
         extern unsigned int start_sntp(void);
         if (sntp_get_use()) {
             start_sntp();
@@ -694,7 +700,7 @@ void rm_wifi_init(void)
                          OS_TASK_PRIORITY_HIGHEST, &xHandle);
     ASSERT_ERROR_UNINIT(status == pdPASS);
 
-#if (BSP_CFG_RTOS != 2)
+#if (BSP_CFG_RTOS != 2) && (BSP_CFG_RTOS != 3)
     /* Start the tasks and timer running. */
     vTaskStartScheduler();
 #endif
@@ -734,5 +740,3 @@ uint32_t rm_wifi_build_sku_id_get(void)
 {
     return build_sku_id;
 }
-
-

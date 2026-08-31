@@ -12,6 +12,81 @@ extern "C" {
 void uart_w_isr(void);
 void r_ext_irq_w_isr(void);
 
+/* Wi-Fi middleware interrupt handlers.  These entries are part of the
+ * RA6W1 Wi-Fi hardware contract and are not provided by RT-Thread. */
+void KDMA_Handler(void);
+void TDES_CBC_Handler(void);
+void PSK_SHA1_Handler(void);
+void SYSPLL_Lock_Handler(void);
+void RTC_IF_EXTWK_Handler(void);
+void RTC_IF_BLACK_Handler(void);
+void RTC_IF_BROWN_Handler(void);
+void RTC_IF_PCNT_Handler(void);
+void RTC_IF_BCF_MSR_Handler(void);
+void RTC_IF_RTC_ACC_Handler(void);
+void RTC_IF_EXP_Handler(void);
+void RTC_IF_LMR_Handler(void);
+void MRM_Handler(void);
+void DCACHE_MRM_Handler(void);
+void CC312_Handler(void);
+void FPLL_Lock_Handler(void);
+void hsu_isr(void);
+void rxl_mpdu_isr(void);
+void txl_transmit_trigger(void);
+void txl_prot_trigger(void);
+void hal_machw_gen_handler(void);
+void hal_machw_bcn_cancellation_handler(void);
+void phy_rc_isr(void);
+
+#define VECTOR_NUMBER_WIFI_KDMA_IRQ       ((IRQn_Type) KDMA_IRQn)
+#define WIFI_KDMA_IRQ_IRQn                ((IRQn_Type) KDMA_IRQn)
+#define VECTOR_NUMBER_WIFI_TDES_CBC_IRQ  ((IRQn_Type) TDES_CBC_IRQn)
+#define WIFI_TDES_CBC_IRQ_IRQn            ((IRQn_Type) TDES_CBC_IRQn)
+#define VECTOR_NUMBER_WIFI_PSK_SHA1_IRQ   ((IRQn_Type) PSK_SHA1_IRQn)
+#define WIFI_PSK_SHA1_IRQ_IRQn            ((IRQn_Type) PSK_SHA1_IRQn)
+#define VECTOR_NUMBER_WIFI_SYSPLL_LOCK_IRQ ((IRQn_Type) SYSPLL_LOCK_IRQn)
+#define WIFI_SYSPLL_LOCK_IRQ_IRQn          ((IRQn_Type) SYSPLL_LOCK_IRQn)
+#define VECTOR_NUMBER_WIFI_RTCW_EXTWK_IRQ ((IRQn_Type) RTC_IF_EXTWK_IRQn)
+#define WIFI_RTCW_EXTWK_IRQ_IRQn          ((IRQn_Type) RTC_IF_EXTWK_IRQn)
+#define VECTOR_NUMBER_WIFI_RTCW_BLACK_IRQ ((IRQn_Type) RTC_IF_BLACK_IRQn)
+#define WIFI_RTCW_BLACK_IRQ_IRQn          ((IRQn_Type) RTC_IF_BLACK_IRQn)
+#define VECTOR_NUMBER_WIFI_RTCW_BROWN_IRQ ((IRQn_Type) RTC_IF_BROWN_IRQn)
+#define WIFI_RTCW_BROWN_IRQ_IRQn          ((IRQn_Type) RTC_IF_BROWN_IRQn)
+#define VECTOR_NUMBER_WIFI_RTCW_PCNT_IRQ  ((IRQn_Type) RTC_IF_PCNT_IRQn)
+#define WIFI_RTCW_PCNT_IRQ_IRQn           ((IRQn_Type) RTC_IF_PCNT_IRQn)
+#define VECTOR_NUMBER_WIFI_RTCW_BCF_MSR_IRQ ((IRQn_Type) RTC_IF_BCF_MSR_IRQn)
+#define WIFI_RTCW_BCF_MSR_IRQ_IRQn        ((IRQn_Type) RTC_IF_BCF_MSR_IRQn)
+#define VECTOR_NUMBER_WIFI_RTCW_RTC_ACC_IRQ ((IRQn_Type) RTC_IF_RTC_ACC_IRQn)
+#define WIFI_RTCW_RTC_ACC_IRQ_IRQn        ((IRQn_Type) RTC_IF_RTC_ACC_IRQn)
+#define VECTOR_NUMBER_WIFI_RTCW_EXP_IRQ   ((IRQn_Type) RTC_IF_EXP_IRQn)
+#define WIFI_RTCW_EXP_IRQ_IRQn            ((IRQn_Type) RTC_IF_EXP_IRQn)
+#define VECTOR_NUMBER_WIFI_RTCW_LMR_IRQ   ((IRQn_Type) RTC_IF_LMR_IRQn)
+#define WIFI_RTCW_LMR_IRQ_IRQn            ((IRQn_Type) RTC_IF_LMR_IRQn)
+#define VECTOR_NUMBER_WIFI_MRM_IRQ        ((IRQn_Type) MRM_IRQn)
+#define WIFI_MRM_IRQ_IRQn                 ((IRQn_Type) MRM_IRQn)
+#define VECTOR_NUMBER_WIFI_DCACHE_MRM_IRQ ((IRQn_Type) DCACHE_MRM_IRQn)
+#define WIFI_DCACHE_MRM_IRQ_IRQn          ((IRQn_Type) DCACHE_MRM_IRQn)
+#define VECTOR_NUMBER_CC_IRQ              ((IRQn_Type) CC312_IRQn)
+#define CC_IRQ_IRQn                       ((IRQn_Type) CC312_IRQn)
+#define VECTOR_NUMBER_WIFI_FPLL_LOCK_IRQ ((IRQn_Type) FPLL_LOCK_IRQn)
+#define WIFI_FPLL_LOCK_IRQ_IRQn          ((IRQn_Type) FPLL_LOCK_IRQn)
+#define VECTOR_NUMBER_WIFI_HSU_IRQ       ((IRQn_Type) WIFI_HSU_IRQn)
+#define WIFI_HSU_IRQ_IRQn                ((IRQn_Type) WIFI_HSU_IRQn)
+#define VECTOR_NUMBER_WIFI_MACTIMER_IRQ  ((IRQn_Type) WIFI_MACTIMER_IRQn)
+#define WIFI_MACTIMER_IRQ_IRQn           ((IRQn_Type) WIFI_MACTIMER_IRQn)
+#define VECTOR_NUMBER_WIFI_MACRX_IRQ     ((IRQn_Type) WIFI_MACRX_IRQn)
+#define WIFI_MACRX_IRQ_IRQn              ((IRQn_Type) WIFI_MACRX_IRQn)
+#define VECTOR_NUMBER_WIFI_MACTX_IRQ     ((IRQn_Type) WIFI_MACTX_IRQn)
+#define WIFI_MACTX_IRQ_IRQn              ((IRQn_Type) WIFI_MACTX_IRQn)
+#define VECTOR_NUMBER_WIFI_MACPROT_IRQ   ((IRQn_Type) WIFI_MACPROT_IRQn)
+#define WIFI_MACPROT_IRQ_IRQn            ((IRQn_Type) WIFI_MACPROT_IRQn)
+#define VECTOR_NUMBER_WIFI_MACINTGEN_IRQ ((IRQn_Type) WIFI_MACINTGEN_IRQn)
+#define WIFI_MACINTGEN_IRQ_IRQn          ((IRQn_Type) WIFI_MACINTGEN_IRQn)
+#define VECTOR_NUMBER_WIFI_MACBCN_IRQ    ((IRQn_Type) WIFI_MACBCN_IRQn)
+#define WIFI_MACBCN_IRQ_IRQn             ((IRQn_Type) WIFI_MACBCN_IRQn)
+#define VECTOR_NUMBER_WIFI_RC_IRQ        ((IRQn_Type) WIFI_RC_IRQn)
+#define WIFI_RC_IRQ_IRQn                 ((IRQn_Type) WIFI_RC_IRQn)
+
 #define VECTOR_NUMBER_UARTW0_IRQ ((IRQn_Type) UART_IRQn) /* UARTW IRQ (Generic interrupt) */
 #define UARTW0_IRQ_IRQn          ((IRQn_Type) UART_IRQn) /* UARTW IRQ (Generic interrupt) */
 

@@ -27,6 +27,10 @@ ROM_VENEER romac_init_primitives,  0x0f04c439
 ROM_VENEER rtos_setup_feat,        0x0f04cb15
 ROM_VENEER rtos_setup_func,        0x0f04cc3d
 ROM_VENEER timp_set_backup_addr,   0x0f0537c9
+ROM_VENEER CC_HalWaitInterrupt,    0x0f0427a5
+ROM_VENEER CC_HalMaskInterrupt,    0x0f042795
+ROM_VENEER CC_HalClearInterruptBit, 0x0f042769
+ROM_VENEER CC_HalWaitInterruptRND, 0x0f0427b1
 
 .ltorg
 

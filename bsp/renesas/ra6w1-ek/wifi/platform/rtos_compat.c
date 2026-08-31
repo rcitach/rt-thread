@@ -27,6 +27,17 @@
 #undef xPortGetMinimumEverFreeHeapSize
 #endif
 
+/* lwipopts_freertos.h exposes this symbol when the vendor objects are built
+ * with configUSE_POSIX_ERRNO enabled. RT-Thread keeps errno in its own libc
+ * layer, but the prebuilt Wi-Fi ABI still expects this global. */
+int FreeRTOS_errno = 0;
+
+/* The prebuilt WPA archive calls this optional MbedTLS debug API. */
+void mbedtls_debug_set_threshold(int threshold)
+{
+    (void) threshold;
+}
+
 /* The vendor archives use the FreeRTOS heap ABI directly.  The RT-Thread
  * wrapper maps these names for C sources, but that mapping cannot affect an
  * already-built archive. */

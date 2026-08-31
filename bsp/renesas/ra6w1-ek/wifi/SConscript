@@ -8,6 +8,11 @@ Import('rtconfig')
 cwd = GetCurrentDir()
 bsp_root = os.path.dirname(cwd)
 wrapper_root = os.path.join(bsp_root, 'packages', 'FreeRTOS_Wrapper-latest', 'FreeRTOS')
+sdk_root = os.path.join(cwd, 'supplicant', 'sdk')
+
+
+def w(*parts):
+    return os.path.join(cwd, *parts)
 
 
 def collect_c(root):
@@ -27,108 +32,236 @@ def collect_dirs(root):
     return result
 
 
-platform_roots = [
-    os.path.join(cwd, 'platform', 'rm_wifi'),
-    os.path.join(cwd, 'platform', 'rm_lwip_w'),
-    os.path.join(cwd, 'platform', 'rm_mbedtls'),
-    os.path.join(cwd, 'platform', 'rm_psa_crypto_w'),
-    os.path.join(cwd, 'platform', 'r_cc312_openable_w'),
-    os.path.join(cwd, 'platform', 'rm_watchdog_service_w'),
-    os.path.join(cwd, 'platform', 'rm_vee_flash_w'),
-    os.path.join(cwd, 'platform', 'rm_map_persistant_w'),
-    os.path.join(cwd, 'platform', 'rm_block_media_spi_w'),
-    os.path.join(cwd, 'platform', 'rm_comms_lock'),
-    os.path.join(cwd, 'platform', 'rm_comms_uart_w'),
-]
-
+# Only the RM Wi-Fi service and startup dependencies are compiled here.
 src_platform = [
-    os.path.join(cwd, 'platform', 'wifi_instances.c'),
-    os.path.join(cwd, 'platform', 'rtos_compat.c'),
-    os.path.join(cwd, 'platform', 'rom', 'rom_api_veneers.S'),
+    w('platform', 'wifi_instances.c'),
+    w('platform', 'rtos_compat.c'),
+    w('platform', 'rom', 'rom_api_veneers.S'),
+    w('platform', 'rm_wifi', 'rm_wifi.c'),
+    w('platform', 'rm_wifi', 'rm_wifi_api.c'),
+    w('platform', 'rm_wifi', 'rm_wifi_dpm.c'),
+    w('platform', 'rm_wifi', 'rm_wifi_dpm_internal.c'),
+    w('platform', 'rm_wifi', 'rm_wifi_event.c'),
+    w('platform', 'rm_wifi', 'rm_wifi_helper.c'),
+    w('platform', 'rm_wifi', 'rm_wifi_init.c'),
+    w('platform', 'rm_wifi', 'rm_wifi_reg_pwr_db.c'),
+    w('platform', 'rm_vee_flash_w', 'rm_cert.c'),
+    w('platform', 'rm_vee_flash_w', 'rm_vee_flash_w.c'),
+    w('platform', 'rm_vee_flash_w', 'rm_vee_flash_w_rrq_nvram.c'),
+    w('platform', 'rm_map_persistant_w', 'rm_map_persistant_w.c'),
+    w('platform', 'rm_block_media_spi_w', 'rm_block_media_spi_w.c'),
+    w('platform', 'rm_comms_lock', 'rm_comms_lock.c'),
+    w('platform', 'rm_comms_uart_w', 'rm_comms_uart_w.c'),
+    w('platform', 'rm_watchdog_service_w', 'rm_watchdog_service_w.c'),
 ]
-for root in platform_roots:
-    for source in collect_c(root):
-        # RT-Thread supplies lwIP core, sys_arch and memory management. The
-        # vendor rm_lwip_w directory is added below as a small adapter set.
-        if os.path.basename(root) == 'rm_lwip_w':
-            continue
-        relative = os.path.relpath(source, root)
-        if os.path.basename(root) == 'rm_wifi' and relative.startswith('user_app' + os.sep):
-            continue
-        src_platform.append(source)
 
-# These are the SDK files used by the original RA6W1 Wi-Fi build. OTA and
-# command-line application sources are intentionally outside this first port.
-sdk_root = os.path.join(cwd, 'supplicant', 'sdk')
+# The prebuilt supplicant archive replaces the complete SDK supplicant source
+# tree. These small SDK adapters are still needed for PTIM and scan commands.
 src_sdk = [
-    os.path.join(sdk_root, 'bsp', 'system', 'sys_man', 'sys_clock_mgr_da1640x.c'),
-    os.path.join(sdk_root, 'interfaces', 'wifi', 'ptimg', 'ptim.c'),
-    os.path.join(sdk_root, 'interfaces', 'wifi', 'ptimg', 'ptim_loader.c'),
-    os.path.join(sdk_root, 'interfaces', 'wifi', 'stack', 'wpa_cli', 'wpa_cli.c'),
-    os.path.join(sdk_root, 'interfaces', 'wifi', 'stack', 'wpa_cli', 'wpa_ctrl.c'),
-    os.path.join(sdk_root, 'interfaces', 'wifi', 'system', 'src', 'common', 'ra6w1_retarget.c'),
-    os.path.join(sdk_root, 'interfaces', 'wifi', 'system', 'src', 'common', 'util_api.c'),
-    os.path.join(sdk_root, 'middleware', 'osal', 'msg_queues.c'),
+    w('supplicant', 'sdk', 'interfaces', 'wifi', 'ptimg', 'ptim.c'),
+    w('supplicant', 'sdk', 'interfaces', 'wifi', 'ptimg', 'ptim_loader.c'),
+    w('supplicant', 'sdk', 'interfaces', 'wifi', 'stack', 'wpa_cli', 'wpa_cli.c'),
+    w('supplicant', 'sdk', 'interfaces', 'wifi', 'stack', 'wpa_cli', 'wpa_ctrl.c'),
+    w('supplicant', 'sdk', 'interfaces', 'wifi', 'system', 'src', 'common', 'util_api.c'),
+    w('supplicant', 'sdk', 'middleware', 'osal', 'msg_queues.c'),
 ]
-src_sdk += collect_c(os.path.join(sdk_root, 'interfaces', 'wifi', 'stack', 'supplicant'))
 
-# Only the WiFi netif and the vendor network-management glue are retained.
-# The lwIP core and FreeRTOS sys_arch are provided by RT-Thread.
-lwip_root = os.path.join(cwd, 'platform', 'rm_lwip_w')
+# RT-Thread supplies the lwIP core and sys_arch implementation. Only the
+# vendor network-management glue and the Wi-Fi netif adapter are compiled.
 src_wifi_lwip = [
-    os.path.join(lwip_root, 'rm_lwip_w_helper.c'),
-    os.path.join(lwip_root, 'rtthread_lwip_compat.c'),
-    os.path.join(lwip_root, 'network', 'net_arp.c'),
-    os.path.join(lwip_root, 'network', 'net_common.c'),
-    os.path.join(lwip_root, 'network', 'net_dhcp_client.c'),
-    os.path.join(lwip_root, 'network', 'net_dhcp_server.c'),
-    os.path.join(lwip_root, 'network', 'net_dns_client.c'),
-    os.path.join(lwip_root, 'network', 'net_ip_handler.c'),
-    os.path.join(lwip_root, 'network', 'net_network_main.c'),
-    os.path.join(lwip_root, 'network', 'net_ping.c'),
-    os.path.join(lwip_root, 'network', 'net_sntp_client.c'),
-    os.path.join(lwip_root, 'network', 'net_stack_init.c'),
-    os.path.join(lwip_root, 'network', 'net_wifi_monitor.c'),
-    os.path.join(lwip_root, 'network', 'user_dpm.c'),
-    os.path.join(lwip_root, 'ext', 'rm_dhcp.c'),
-    os.path.join(lwip_root, 'ext', 'rm_etharp.c'),
-    os.path.join(lwip_root, 'apps', 'dhcpserver', 'dhcpserver.c'),
-    os.path.join(lwip_root, 'apps', 'ping', 'ping.c'),
-    os.path.join(lwip_root, 'apps', 'sntp', 'sntp.c'),
-    # This is the WiFi driver-facing netif adapter. It uses RT-Thread lwIP
-    # headers, while keeping the original driver event contract.
-    os.path.join(cwd, 'platform', 'rm_lwip_w', 'netif', 'ethernetif.c'),
+    w('platform', 'rm_lwip_w', 'rm_lwip_w_helper.c'),
+    w('platform', 'rm_lwip_w', 'rtthread_lwip_compat.c'),
+    w('platform', 'rm_lwip_w', 'network', 'net_arp.c'),
+    w('platform', 'rm_lwip_w', 'network', 'net_common.c'),
+    w('platform', 'rm_lwip_w', 'network', 'net_ip_handler.c'),
+    w('platform', 'rm_lwip_w', 'network', 'net_network_main.c'),
+    w('platform', 'rm_lwip_w', 'network', 'net_stack_init.c'),
+    w('platform', 'rm_lwip_w', 'network', 'net_wifi_monitor.c'),
+    w('platform', 'rm_lwip_w', 'apps', 'dhcpserver', 'dhcpserver.c'),
+    w('platform', 'rm_lwip_w', 'netif', 'ethernetif.c'),
 ]
-src_crypto = collect_c(os.path.join(cwd, 'crypto', 'mbedtls', 'library'))
+
+# MbedTLS is pulled in by the prebuilt WPA implementation, even though the
+# scan application does not expose a TLS API itself. The vendor config enables
+# the CC312/ALT implementations, so both the upstream library and the local
+# FSP adapters are required.
+src_crypto = [
+    # Objects retained by the basic Wi-Fi/WPA link.
+    w('crypto', 'mbedtls', 'library', 'asn1parse.c'),
+    w('crypto', 'mbedtls', 'library', 'asn1write.c'),
+    w('crypto', 'mbedtls', 'library', 'base64.c'),
+    w('crypto', 'mbedtls', 'library', 'bignum.c'),
+    w('crypto', 'mbedtls', 'library', 'bignum_core.c'),
+    w('crypto', 'mbedtls', 'library', 'ccm.c'),
+    w('crypto', 'mbedtls', 'library', 'cipher.c'),
+    w('crypto', 'mbedtls', 'library', 'cipher_wrap.c'),
+    w('crypto', 'mbedtls', 'library', 'constant_time.c'),
+    w('crypto', 'mbedtls', 'library', 'ctr_drbg.c'),
+    w('crypto', 'mbedtls', 'library', 'ecdh.c'),
+    w('crypto', 'mbedtls', 'library', 'ecdsa.c'),
+    w('crypto', 'mbedtls', 'library', 'ecp.c'),
+    w('crypto', 'mbedtls', 'library', 'ecp_curves.c'),
+    w('crypto', 'mbedtls', 'library', 'entropy.c'),
+    w('crypto', 'mbedtls', 'library', 'gcm.c'),
+    w('crypto', 'mbedtls', 'library', 'hmac_drbg.c'),
+    w('crypto', 'mbedtls', 'library', 'md.c'),
+    w('crypto', 'mbedtls', 'library', 'md5.c'),
+    w('crypto', 'mbedtls', 'library', 'oid.c'),
+    w('crypto', 'mbedtls', 'library', 'pem.c'),
+    w('crypto', 'mbedtls', 'library', 'pk.c'),
+    w('crypto', 'mbedtls', 'library', 'pk_ecc.c'),
+    w('crypto', 'mbedtls', 'library', 'pk_wrap.c'),
+    w('crypto', 'mbedtls', 'library', 'pkcs12.c'),
+    w('crypto', 'mbedtls', 'library', 'pkparse.c'),
+    w('crypto', 'mbedtls', 'library', 'platform.c'),
+    w('crypto', 'mbedtls', 'library', 'platform_util.c'),
+    w('crypto', 'mbedtls', 'library', 'psa_crypto.c'),
+    w('crypto', 'mbedtls', 'library', 'psa_crypto_cipher.c'),
+    w('crypto', 'mbedtls', 'library', 'psa_crypto_client.c'),
+    w('crypto', 'mbedtls', 'library', 'psa_crypto_driver_wrappers_no_static.c'),
+    w('crypto', 'mbedtls', 'library', 'psa_crypto_ecp.c'),
+    w('crypto', 'mbedtls', 'library', 'psa_crypto_ffdh.c'),
+    w('crypto', 'mbedtls', 'library', 'psa_crypto_hash.c'),
+    w('crypto', 'mbedtls', 'library', 'psa_crypto_mac.c'),
+    w('crypto', 'mbedtls', 'library', 'psa_crypto_rsa.c'),
+    w('crypto', 'mbedtls', 'library', 'psa_crypto_slot_management.c'),
+    w('crypto', 'mbedtls', 'library', 'psa_util.c'),
+    w('crypto', 'mbedtls', 'library', 'rsa_alt_helpers.c'),
+    w('crypto', 'mbedtls', 'library', 'sha1.c'),
+    w('crypto', 'mbedtls', 'library', 'sha256.c'),
+    w('crypto', 'mbedtls', 'library', 'sha512.c'),
+    w('crypto', 'mbedtls', 'library', 'ssl_client.c'),
+    w('crypto', 'mbedtls', 'library', 'ssl_tls13_server.c'),
+    w('crypto', 'mbedtls', 'library', 'threading.c'),
+    w('crypto', 'mbedtls', 'library', 'x509.c'),
+]
+src_crypto += [
+    w('platform', 'rm_psa_crypto_w', 'aes_alt.c'),
+    w('platform', 'rm_psa_crypto_w', 'aes_vendor.c'),
+    w('platform', 'rm_psa_crypto_w', 'chacha20_alt.c'),
+    w('platform', 'rm_psa_crypto_w', 'chachapoly_alt.c'),
+    w('platform', 'rm_psa_crypto_w', 'cmac_alt.c'),
+    w('platform', 'rm_psa_crypto_w', 'des_alt.c'),
+    w('platform', 'rm_psa_crypto_w', 'dhm_alt.c'),
+    w('platform', 'rm_psa_crypto_w', 'ecc_alt_internal.c'),
+    w('platform', 'rm_psa_crypto_w', 'ecdh_alt.c'),
+    w('platform', 'rm_psa_crypto_w', 'pkcs5_alt.c'),
+    w('platform', 'rm_psa_crypto_w', 'rsa_alt.c'),
+    w('platform', 'rm_psa_crypto_w', 'sha1_alt.c'),
+    w('platform', 'rm_psa_crypto_w', 'sha256_alt.c'),
+    w('platform', 'rm_psa_crypto_w', 'sha_alt_process.c'),
+    w('platform', 'rm_psa_crypto_w', 'trng_entropy.c'),
+    w('platform', 'rm_psa_crypto_w', 'vendor.c'),
+]
+src_crypto += [
+    w('platform', 'rm_mbedtls', 'ssl_ciphersuites.c'),
+    w('platform', 'rm_mbedtls', 'ssl_msg.c'),
+    w('platform', 'rm_mbedtls', 'ssl_tls.c'),
+    w('platform', 'rm_mbedtls', 'ssl_tls12_client.c'),
+    w('platform', 'rm_mbedtls', 'ssl_tls12_server.c'),
+    w('platform', 'rm_mbedtls', 'ssl_tls13_client.c'),
+    w('platform', 'rm_mbedtls', 'ssl_tls13_generic.c'),
+    w('platform', 'rm_mbedtls', 'ssl_tls13_keys.c'),
+    w('platform', 'rm_mbedtls', 'timing.c'),
+    w('platform', 'rm_mbedtls', 'x509_crt.c'),
+]
+
+# Keep only the CryptoCell objects used by the known-good wifi_scan image.
+# The WPA archive depends on this backend even for the basic scan path.
+cc312_required_sources = [
+    "platform/r_cc312_openable_w/codesafe/crypto_api/cc3x_sym/driver/aes_driver.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/cc3x_sym/driver/chacha_driver.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/cc3x_sym/driver/driver_common.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/cc3x_sym/driver/hash_driver.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/common/cc_common_conv_endian.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/common/cc_common_math.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/ec_mont/cc_ec_mont.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/ec_wrst/cc_ecpki_domain.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/ec_wrst/cc_ecpki_domain_secp192k1.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/ec_wrst/cc_ecpki_domain_secp192r1.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/ec_wrst/cc_ecpki_domain_secp224k1.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/ec_wrst/cc_ecpki_domain_secp224r1.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/ec_wrst/cc_ecpki_domain_secp256k1.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/ec_wrst/cc_ecpki_domain_secp256r1.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/ec_wrst/cc_ecpki_domain_secp384r1.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/ec_wrst/cc_ecpki_domain_secp521r1.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/ec_wrst/cc_ecpki_kg.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/pki/common/pka.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/pki/common/pki.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/pki/ec_mont/ec_mont.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/pki/ec_mont/ec_mont_domain_curve25519.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/pki/ec_mont/pka_ec_mont.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/pki/ec_wrst/ec_wrst_genkey.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/pki/ec_wrst/pka_ec_wrst.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/pki/ec_wrst/pka_ec_wrst_smul_scap.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/pki/poly/poly.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/pki/rsa/rsa_genkey.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/pki/rsa/rsa_private.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/pki/rsa/rsa_public.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/rnd_dma/cc_rnd_common.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/rnd_dma/llf_rnd.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/rnd_dma/llf_rnd_trng90b.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/rsa/cc_rsa_kg.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/rsa/cc_rsa_oaep.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/rsa/cc_rsa_pkcs_ver15_util.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/rsa/cc_rsa_prim.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/rsa/cc_rsa_pss21_util.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/rsa/cc_rsa_schemes.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/rsa/cc_rsa_sign.c",
+    "platform/r_cc312_openable_w/codesafe/crypto_api/rsa/cc_rsa_verify.c",
+    "platform/r_cc312_openable_w/crypto_primitives.c",
+    "platform/r_cc312_openable_w/host/cc3x_lib/cc_lib.c",
+    "platform/r_cc312_openable_w/host/cc3x_lib/cc_rng_plat.c",
+    "platform/r_cc312_openable_w/host/cc3x_lib/cc_util_cmac.c",
+    "platform/r_cc312_openable_w/host/cc_mng/mbedtls_cc_mng_int.c",
+    "platform/r_cc312_openable_w/host/pal/cc_pal_trng.c",
+    "platform/r_cc312_openable_w/host/pal/freertos/cc_pal.c",
+    "platform/r_cc312_openable_w/host/pal/freertos/cc_pal_abort_plat.c",
+    "platform/r_cc312_openable_w/host/pal/freertos/cc_pal_buff_attr.c",
+    "platform/r_cc312_openable_w/host/pal/freertos/cc_pal_dma.c",
+    "platform/r_cc312_openable_w/host/pal/freertos/cc_pal_interrupt_ctrl.c",
+    "platform/r_cc312_openable_w/host/pal/freertos/cc_pal_mem.c",
+    "platform/r_cc312_openable_w/host/pal/freertos/cc_pal_mutex.c",
+    "platform/r_cc312_openable_w/host/pal/freertos/cc_pal_pm.c",
+    "platform/r_cc312_openable_w/r_cc312_crypto_secureboot.c",
+    "platform/r_cc312_openable_w/shared/proj/cc3x/cc_ecpki_info.c",
+    "platform/r_cc312_openable_w/shared/proj/cc3x/cc_hash_info.c",
+    "platform/r_cc312_openable_w/shared/proj/cc3x/cc_rsa_info.c",
+]
+cc312_root = w('platform', 'r_cc312_openable_w')
+cc312_prefix = 'platform/r_cc312_openable_w/'
+src_crypto += [os.path.join(cc312_root, source[len(cc312_prefix):])
+               for source in cc312_required_sources]
+
 src_rtos_hal = collect_c(os.path.join(bsp_root, 'ra', 'fsp', 'src', 'r_rtc_w'))
 src_rtos_hal += collect_c(os.path.join(bsp_root, 'ra', 'fsp', 'src', 'r_wdog_w'))
-src_app = [os.path.join(cwd, 'app', 'wifi_app.c')]
+src_app = [w('app', 'wifi_app.c')]
 
+rt_lwip_root = os.path.join(RTT_ROOT, 'components', 'net', 'lwip')
 include_roots = [
-    os.path.join(cwd, 'config'),
-    os.path.join(cwd, 'os'),
-    os.path.join(cwd, 'platform', 'fsp_inc'),
-    os.path.join(cwd, 'platform', 'fsp_inc', 'api'),
-    os.path.join(cwd, 'platform', 'fsp_inc', 'api'),
-    os.path.join(cwd, 'platform', 'fsp_inc', 'instances'),
-    os.path.join(RTT_ROOT, 'components', 'net', 'lwip', 'port'),
-    os.path.join(RTT_ROOT, 'components', 'net', 'lwip', 'lwip-2.1.2', 'src', 'include'),
-    os.path.join(RTT_ROOT, 'components', 'net', 'lwip', 'lwip-2.1.2', 'src', 'include', 'netif'),
-    # WiFi-specific lwIP application declarations (ping/dhcpserver), not
-    # the vendor lwIP core headers.
-    os.path.join(cwd, 'protocol', 'lwip', 'src', 'include', 'lwip', 'apps'),
-    os.path.join(lwip_root, 'network', 'include'),
-    os.path.join(lwip_root, 'ext', 'inc'),
-    os.path.join(lwip_root, 'apps', 'include'),
-    os.path.join(lwip_root, 'apps', 'dhcpserver'),
-    os.path.join(lwip_root, 'apps', 'ping'),
-    os.path.join(lwip_root, 'apps', 'sntp'),
-    os.path.join(cwd, 'crypto', 'mbedtls', 'include'),
-    os.path.join(cwd, 'crypto', 'mbedtls', 'include', 'mbedtls'),
-    os.path.join(cwd, 'crypto', 'mbedtls', 'include', 'psa'),
-    os.path.join(cwd, 'crypto', 'mbedtls'),
-    os.path.join(cwd, 'crypto', 'mbedtls', 'library'),
-    os.path.join(cwd, 'supplicant', 'sdk'),
+    w('config'),
+    w('os'),
+    w('platform', 'fsp_inc'),
+    w('platform', 'fsp_inc', 'api'),
+    w('platform', 'fsp_inc', 'instances'),
+    w('platform', 'rm_lwip_w', 'osal', 'include'),
+    w('platform', 'rm_lwip_w', 'include'),
+    w('platform', 'rm_lwip_w', 'network'),
+    w('platform', 'rm_lwip_w', 'network', 'include'),
+    w('platform', 'rm_lwip_w', 'ext', 'inc'),
+    w('platform', 'rm_lwip_w', 'apps', 'include'),
+    w('platform', 'rm_lwip_w', 'apps', 'dhcpserver'),
+    # Legacy declarations only. No vendor lwIP core source is built.
+    w('protocol', 'lwip', 'src', 'include', 'lwip', 'apps'),
+    os.path.join(rt_lwip_root, 'port'),
+    os.path.join(rt_lwip_root, 'lwip-2.1.2', 'src', 'include'),
+    os.path.join(rt_lwip_root, 'lwip-2.1.2', 'src', 'include', 'netif'),
+    w('crypto', 'mbedtls', 'include'),
+    w('crypto', 'mbedtls', 'include', 'mbedtls'),
+    w('crypto', 'mbedtls', 'include', 'psa'),
+    w('crypto', 'mbedtls'),
+    w('crypto', 'mbedtls', 'library'),
+    w('supplicant', 'sdk'),
     os.path.join(wrapper_root, 'include', 'freertos'),
     os.path.join(wrapper_root, 'include'),
     os.path.join(wrapper_root, 'portable', 'rt-thread'),
@@ -148,32 +281,20 @@ include_roots = [
 ]
 
 for root in [
-    os.path.join(cwd, 'platform', 'fsp_inc'),
-    os.path.join(cwd, 'platform', 'rm_wifi'),
-    os.path.join(cwd, 'platform', 'rm_mbedtls'),
-    os.path.join(cwd, 'platform', 'rm_psa_crypto_w'),
-    os.path.join(cwd, 'platform', 'r_cc312_openable_w'),
-    os.path.join(cwd, 'supplicant', 'sdk'),
+    w('platform', 'fsp_inc'),
+    w('platform', 'rm_wifi'),
+    w('platform', 'rm_vee_flash_w'),
+    w('platform', 'rm_map_persistant_w'),
+    w('platform', 'rm_block_media_spi_w'),
+    w('platform', 'rm_watchdog_service_w'),
+    w('platform', 'rm_comms_lock'),
+    w('platform', 'rm_comms_uart_w'),
+    w('platform', 'rm_mbedtls'),
+    w('platform', 'rm_psa_crypto_w'),
+    w('platform', 'r_cc312_openable_w'),
+    sdk_root,
 ]:
     include_roots += collect_dirs(root)
-
-include_roots += [
-    os.path.join(lwip_root, 'network'),
-    os.path.join(lwip_root, 'network', 'include'),
-    os.path.join(lwip_root, 'ext', 'inc'),
-    os.path.join(lwip_root, 'apps', 'include'),
-    os.path.join(lwip_root, 'apps', 'dhcpserver'),
-    os.path.join(lwip_root, 'apps', 'ping'),
-    os.path.join(lwip_root, 'apps', 'sntp'),
-]
-
-# Do not add lwIP's nested compatibility directories to the global include
-# search path. Some of them contain an errno.h that would shadow newlib's
-# errno.h in unrelated BSP sources.
-include_roots = [path for path in include_roots
-                 if not path.endswith(os.path.join('osal', 'include', 'arch'))
-                 and not path.endswith(os.path.join('include', 'lwip'))
-                 and not path.endswith(os.path.join('include', 'compat', 'stdc'))]
 
 include_roots = sorted(set(include_roots))
 
@@ -185,26 +306,29 @@ cppdefines = [
     '__SUPPORT_IPV4__',
     '__SUPPORT_IPV6__',
     '__SUPPORT_DHCP_SVR__',
-    '__SUPPORT_SNTP_CLIENT__',
+    'RA6W1_WIFI_BASIC_SCAN',
 ]
 
 cpppath = include_roots
 group = []
-group += DefineGroup('WiFiPlatform', src_platform, depend=[''], CPPPATH=cpppath, CPPDEFINES=cppdefines)
-group += DefineGroup('WiFiSDK', src_sdk, depend=[''], CPPPATH=cpppath, CPPDEFINES=cppdefines)
-group += DefineGroup('WiFiLwIPAdapter', src_wifi_lwip, depend=['RT_USING_LWIP'], CPPPATH=cpppath, CPPDEFINES=cppdefines)
-group += DefineGroup('WiFiCrypto', src_crypto, depend=[''], CPPPATH=cpppath,
-                     CPPDEFINES=cppdefines, LOCAL_CCFLAGS='-Os')
-group += DefineGroup('WiFiRTOSHal', src_rtos_hal, depend=[''], CPPPATH=cpppath, CPPDEFINES=cppdefines)
-group += DefineGroup('WiFiApp', src_app, depend=[''], CPPPATH=cpppath, CPPDEFINES=cppdefines)
+group += DefineGroup('WiFiPlatform', src_platform, depend=[''],
+                     CPPPATH=[w('config')],
+                     LOCAL_CPPPATH=cpppath, LOCAL_CPPDEFINES=cppdefines)
+group += DefineGroup('WiFiSDK', src_sdk, depend=[''],
+                     LOCAL_CPPPATH=cpppath, LOCAL_CPPDEFINES=cppdefines)
+group += DefineGroup('WiFiLwIPAdapter', src_wifi_lwip, depend=['RT_USING_LWIP'],
+                     LOCAL_CPPPATH=cpppath, LOCAL_CPPDEFINES=cppdefines)
+group += DefineGroup('WiFiCrypto', src_crypto, depend=[''],
+                     LOCAL_CPPPATH=cpppath, LOCAL_CPPDEFINES=cppdefines,
+                     LOCAL_CCFLAGS='-Os')
+group += DefineGroup('WiFiRTOSHal', src_rtos_hal, depend=[''],
+                     LOCAL_CPPPATH=cpppath, LOCAL_CPPDEFINES=cppdefines)
+group += DefineGroup('WiFiApp', src_app, depend=[''],
+                     LOCAL_CPPPATH=cpppath, LOCAL_CPPDEFINES=cppdefines)
 
-# The four vendor archives are kept together. libsupplicant.a is a fallback
-# for builds that disable the corresponding SDK source group; with this port
-# the source group is linked first, so duplicate archive members are not used.
+# The archives contain the MAC, ROMAC, driver and supplicant implementation.
 driver_libs = ['macsw', 'rwnx_drv', 'romaclib', 'supplicant', 'r_cc312_property_w']
-group += DefineGroup('WiFiDriver', [], depend=[''], CPPPATH=cpppath,
-                     CPPDEFINES=cppdefines,
-                     LIBPATH=[os.path.join(cwd, 'driver')],
-                     LIBS=driver_libs)
+group += DefineGroup('WiFiDriver', [], depend=[''],
+                     LIBPATH=[w('driver')], LIBS=driver_libs)
 
 Return('group')
