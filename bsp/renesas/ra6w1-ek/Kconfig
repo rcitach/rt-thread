@@ -22,3 +22,19 @@ source "$(RTT_DIR)/Kconfig"
 osource "$PKGS_DIR/Kconfig"
 rsource "../libraries/Kconfig"
 source "$(BSP_DIR)/board/Kconfig"
+
+if RT_USING_LWIP
+
+config RT_LWIP_PBUF_LINK_ENCAPSULATION_HLEN
+    int
+    default 456
+
+config RT_LWIP_PBUF_PAYLOAD_MARGIN_LEN
+    int
+    default 36
+
+config RT_LWIP_NETIF_TX_SINGLE_PBUF
+    bool
+    default y
+
+endif

@@ -1,79 +1,60 @@
-# RA6W1 Wi-Fi port
+# Wi-Fi backup demo
 
-This directory contains the Wi-Fi middleware port for the RA6W1-EK BSP.
+`apps/wifi_fc80211_demo.c` is the standalone cfg80211 demo used by the
+RA6W1-EK BSP. It is selected by the BSP's top-level `SConscript` and is linked
+with the archives in `libs/`. The old `../wifi/SConscript` is retained only
+for legacy callers.
 
-## Directory layout
+## Ownership
 
-- `app/`: RT-Thread startup entry. It opens MAP/VEE and starts `WIFI_On()`.
-- `config/`: Wi-Fi, lwIP, mbedTLS, VEE and FreeRTOS compatibility settings.
-- `driver/`: vendor archives. The four Wi-Fi archives are `libmacsw.a`,
-  `librwnx_drv.a`, `libromaclib.a` and `libsupplicant.a`. The CC312 property
-  archive is also linked because the original project requires it.
-- `platform/`: Renesas Wi-Fi FSP adapters, RT-Thread ABI adapters, GPIO,
-  flash, VEE, MAP, watchdog, UART and the selected Wi-Fi/lwIP glue.
-- `protocol/lwip/`: vendor lwIP declarations and reference sources. Its lwIP
-  core is not compiled by this BSP.
-- `crypto/`: mbedTLS source and configuration.
-- `supplicant/`: Wi-Fi SDK headers and source used by the port.
-- `os/`: small OS compatibility headers.
+This directory is the active Wi-Fi source tree for this BSP. The Wi-Fi build
+script, application, port layer, configuration, SDK adapters, crypto adapters
+and vendor archives are all kept below `wifi_back/`.
+The default top-level BSP build skips the old `wifi/` directory; its
+`SConscript` is retained only for legacy direct callers and is not an active
+source or include root.
+
+- `include/`: local public headers for the hardware preparation and crypto
+  port layers.
+- `platform/`: clock preparation, ROM veneers, RTOS compatibility,
+  FSP adapters, lwIP/DHCP glue and the Wi-Fi platform glue.
+- `sdk/`: `rwnx_cfg.h`, cfg80211 ABI structures, PTIM headers,
+  FreeRTOS/driver headers and the supplicant compatibility headers.
+- `crypto/` and `platform/r_cc312_openable_w/`: Mbed TLS and
+  CryptoCell objects used for WPA2 PSK derivation.
+- `config/`, `os/` and the RT-Thread lwIP component: configuration,
+  allocator, timing and network stack support.
+- `port/wifi_crypto_port.c`: CryptoCell callback bridge used by the
+  password-form connection command.
+
+The five files under `libs/` are the vendor archive inputs for this backup
+demo: `libmacsw.a`, `librwnx_drv.a`, `libromaclib.a`, `libsupplicant.a` and
+`libr_cc312_property_w.a`.
 
 ## Build
 
-Run from the BSP directory. `RTT_EXEC_PATH` is set explicitly because the
-checked-in `rtconfig.py` default is a Windows toolchain path:
+Run from the BSP directory:
 
 ```sh
 RTT_EXEC_PATH=/home/rain/.tools/toolchain/arm-gnu-14.3.rel1-none-eabi/bin \
 scons -j4
 ```
 
-The build produces `rtthread.elf`, `rtthread.bin`, `rtthread.hex` and the
-RA6W1 flash image.
+The build must produce `rtthread.elf` and include symbols from
+`wifi_back/apps/wifi_fc80211_demo.c` and `wifi_back/libs/librwnx_drv.a`.
 
-## Startup sequence
+## Run
 
-`app/wifi_app.c` starts a delayed RT-Thread worker. The worker opens the
-MAP instance first; MAP opens the VEE/NVRAM service, which opens the block
-media and OSPI flash instance. It then calls `WIFI_On()`.
+After flashing the image:
 
-`WIFI_On()` starts the Wi-Fi driver but does not select an SSID or start an
-automatic connection. Use the public Wi-Fi API after startup, or change the
-application to call `WIFI_OnAuto()` when valid connection data is already
-stored in NVRAM.
+```text
+msh /> wifi_low_init
+msh /> wifi_low_scan
+msh /> wifi_low_connect xiaomi 12345678 2437 02:5C:AD:40:32:C7
+msh /> wifi_low_status
+msh /> wifi_low_disconnect
+```
 
-## RT-Thread lwIP boundary
-
-The protocol stack is RT-Thread's `components/net/lwip/lwip-2.1.2`. Its
-core, `sys_arch`, memory management and timeout scheduler are compiled by
-RT-Thread. The Wi-Fi port only compiles the selected adapter and network
-management files listed in `wifi/SConscript`.
-
-The vendor DHCP Server, SNTP and network-management APIs are retained where
-they are part of the Wi-Fi feature. Vendor-private lwIP extensions are
-replaced by `rtthread_lwip_compat.c`; in particular, the DHCP Server PCB is
-kept in the server module instead of adding a field to RT-Thread's `struct
-netif`. The original SDK still uses the FreeRTOS ABI for Wi-Fi driver and
-supplicant code, so `platform/rtos_compat.c` and the FreeRTOS wrapper remain
-required. This does not make the network protocol stack a FreeRTOS lwIP
-stack. No source file under RT-Thread's `components/net/lwip` is required to
-be modified: Wi-Fi-specific interface-index and interface-name compatibility
-is kept under this `wifi/` directory and in the BSP's generated `rtconfig.h`.
-
-## Porting boundary
-
-- `platform/rtos_compat.c` exports the FreeRTOS ABI symbols referenced by the
-  prebuilt archives and maps them to RT-Thread memory, timer and interrupt
-  services.
-- The DA1640 clock-manager implementation is excluded for RA6W1. The port
-  keeps the middleware-visible clock state while FSP owns the actual MCU
-  clock configuration.
-- `platform/rom/rom_api_veneers.S` provides Thumb veneers for the ROM
-  functions called by the prebuilt Wi-Fi archives. The corresponding entries
-  are removed from `script/rom_code_gcc.symbols` so the linker can type these
-  calls as functions without absolute-symbol branch warnings.
-- `script/rom_code_gcc.symbols` is required by `libromaclib.a` and the Wi-Fi
-  SDK. The ROMAC/DPM/PTIM symbols are fixed-address ROM interfaces, so the
-  image must run with the matching Wi-Fi/ROM hardware and firmware.
-- EVK WPS/factory-reset GPIO application code is not included in the startup
-  port; its callback is intentionally a no-op. It can be added later under
-  `app/` together with an RT-Thread external-interrupt adapter.
+The connection command calls `rwnx_cfg80211_connect()` directly. A successful
+`FC80211_CMD_CONNECT` event confirms the low-level association path. The demo
+does not start the complete WPA Supplicant state machine or DHCP workflow.

@@ -28,7 +28,6 @@
 
 #include "ra6w1_dpm_system.h"
 #include "common_def.h"
-#include "rm_vee_flash_w_rrq_nvram.h"
 
 /**********************************************************************************************************************
  * Macro definitions

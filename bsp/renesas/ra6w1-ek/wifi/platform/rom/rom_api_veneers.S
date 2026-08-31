@@ -18,6 +18,8 @@
 .endm
 
 ROM_VENEER CC_BsvLcsGet,          0x0f0415a1
+ROM_VENEER CC_BsvCoreClkGatingEnable, 0x0f040f7d
+ROM_VENEER CC_BsvLcsGetAndInit,    0x0f0415d9
 ROM_VENEER da16x_crc8ccitt,        0x0f0469ad
 ROM_VENEER dpm_get_rtclk,          0x0f047769
 ROM_VENEER dpmtm_add_twt_timer,    0x0f0492c9
@@ -27,6 +29,13 @@ ROM_VENEER romac_init_primitives,  0x0f04c439
 ROM_VENEER rtos_setup_feat,        0x0f04cb15
 ROM_VENEER rtos_setup_func,        0x0f04cc3d
 ROM_VENEER timp_set_backup_addr,   0x0f0537c9
+ROM_VENEER CC_HalWaitInterrupt,    0x0f0427a5
+ROM_VENEER CC_HalMaskInterrupt,    0x0f042795
+ROM_VENEER CC_HalClearInterruptBit, 0x0f042769
+ROM_VENEER CC_HalWaitInterruptRND, 0x0f0427b1
+ROM_VENEER CC_HalInit,             0x0f042775
+ROM_VENEER CC_HalTerminate,        0x0f0427a1
+ROM_VENEER init_romcrypto_platform, 0x0f044e9d
 
 .ltorg
 

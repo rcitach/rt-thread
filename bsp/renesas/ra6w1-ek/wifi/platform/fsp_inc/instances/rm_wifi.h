@@ -24,18 +24,11 @@
 
 #include "FreeRTOS.h"
 #include "semphr.h"
-#include "stream_buffer.h"
 #include "sdk_defs.h"
 #include "rm_wifi_api.h"
-#include "rm_watchdog_service_w.h"
-#include "rm_vee_flash_w.h"
 #include "rm_wifi_config.h"
-#include "r_rtc_api.h"
 #ifdef RM_STDIO_W
 #include "rm_stdio_w_cfg.h"
-#endif
-#ifdef RM_MAP_PERSISTANT_W
-#include "rm_map_persistant_w.h"
 #endif
 
 /* Common macro for FSP header files. There is also a corresponding FSP_FOOTER macro at the end of this file. */
@@ -68,9 +61,9 @@ typedef struct st_wifi_cfg
     const uint32_t num_uarts;           ///< Number of UART interfaces to use
     const uint32_t num_sockets;         ///< Number of sockets to initialize
     const bsp_io_port_pin_t reset_pin;  ///< Reset pin used for module
-    watchdog_service_instance_t const * p_watchdog_service; ///< Pointer to Watchdog Service instance.
-    rm_vee_instance_t const * p_vee_service; ///< Pointer to Watchdog Service instance.
-    rtc_instance_t const * p_rtc_w_service;  ///< Pointer to RTC Service instance. 
+    void const * p_watchdog_service;    ///< Reserved; watchdog is managed by RT-Thread.
+    void const * p_vee_service;        ///< Reserved; persistence is owned by RT-Thread.
+    void const * p_rtc_w_service;       ///< Reserved; RTC is managed by RT-Thread.
     void const * p_context;             ///< User defined context passed into callback function.
     void const * p_extend;              ///< Pointer to extended configuration by instance of interface.
     uint32_t coex_enabled;              ///< Flag to indicate if Co-existence is enabled.

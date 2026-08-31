@@ -11,10 +11,6 @@
  * Includes
  **********************************************************************************************************************/
 #include "rm_wifi_dpm.h"
-#ifdef RM_MAP_PERSISTANT_W
-#include "rm_map_persistant_w.h"
-#include dg_configADNVPARAM_PROJ_FILE
-#endif
 #include "rm_pmgr_w_dpm_socket_internal.h"
 
 /***********************************************************************************************************************
@@ -192,12 +188,7 @@ void RM_WIFI_dpm_ptim_wakeup_count_set(int dtim_period, int saveflag)
 
     if (saveflag) {
         PRINTF("- DPM Tim Wakeup time : %d * 100 msec\n", dtim_period);
-        /* If AP connection is done, you should reboot */
-        
-#ifdef RM_MAP_PERSISTANT_W
-        RM_MAP_PERSISTANT_W_Write_INT(RM_MAP_PERSISTANT_W_get_ctrl(), ENV_GROUP_WIFIPROFILE,
-                                    WIFI_PROFILE_DPM_TIM_WAKEUP_COUNT, dtim_period);
-#endif
+        /* Persistence is intentionally disabled; apply the value at runtime. */
         PRINTF("- AP Connection is already done. System reboot to apply...\n");
     }
 
@@ -310,14 +301,7 @@ void RM_WIFI_dpm_ptim_mcv6_filter_set(uint16_t *mcipv6)
 
 void RM_WIFI_dpm_ptim_wakeup_count_set_from_nvram(void)
 {
-    int count;
-
-#ifdef RM_MAP_PERSISTANT_W
-    RM_MAP_PERSISTANT_W_Read_INT(RM_MAP_PERSISTANT_W_get_ctrl(),
-                               ENV_GROUP_WIFIPROFILE,
-                               WIFI_PROFILE_DPM_TIM_WAKEUP_COUNT,
-                               &count);
-#endif
+    int count = -1;
 
     if (count == -1) {
 #ifdef __DPM_TIM_WAKEUP_TIME_MSEC__
@@ -340,28 +324,12 @@ fsp_err_t RM_WIFI_dpm_ip_condition_set(unsigned char ip_condition)
         return FSP_ERR_INVALID_ARGUMENT;
     }
 
-#ifdef RM_MAP_PERSISTANT_W
-    if (RM_MAP_PERSISTANT_W_Write_INT(RM_MAP_PERSISTANT_W_get_ctrl(), ENV_GROUP_WIFICFG,
-                                NVR_KEY_DPM_IP_CONDITION, ip_condition)){
-        return FSP_ERR_WRITE_FAILED;
-    }
-#endif
-
     return FSP_SUCCESS;
 }
 
 void RM_WIFI_dpm_ip_condition_get(unsigned char * p_ip_condition)
 {
-#ifdef RM_MAP_PERSISTANT_W
-    int ip_condition = PMGR_CONDITION_IPV4_MANDATORY;
-
-    if (RM_MAP_PERSISTANT_W_Read_INT(RM_MAP_PERSISTANT_W_get_ctrl(), ENV_GROUP_WIFICFG,
-                                   NVR_KEY_DPM_IP_CONDITION, &ip_condition)) {
-        *p_ip_condition = PMGR_CONDITION_IPV4_MANDATORY;
-    } else {
-        *p_ip_condition = (unsigned char)ip_condition;
-    }
-#endif
+    *p_ip_condition = PMGR_CONDITION_IPV4_MANDATORY;
     return;
 }
 
