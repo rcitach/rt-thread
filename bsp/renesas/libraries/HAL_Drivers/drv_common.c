@@ -39,6 +39,9 @@ extern fsp_vector_t g_sgi_ppi_vector_table[BSP_CORTEX_VECTOR_TABLE_ENTRIES];
 static void SysTimerInterrupt(void);
 #endif
 
+/* Optional early hook used by board-local hardware bring-up tests. */
+extern void wifi_hw_early_watchdog_freeze(void) __attribute__((weak));
+
 #ifdef RT_USING_FINSH
 #include <finsh.h>
 static void reboot(uint8_t argc, char **argv)
@@ -251,6 +254,11 @@ void R_BSP_WarmStart (bsp_warm_start_event_t event)
 {
     if (BSP_WARM_START_RESET == event)
     {
+        if (wifi_hw_early_watchdog_freeze)
+        {
+            wifi_hw_early_watchdog_freeze();
+        }
+
 #if BSP_FEATURE_FLASH_LP_VERSION != 0
 
         /* Enable reading from data flash. */
