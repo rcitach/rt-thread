@@ -8,11 +8,16 @@ Import('rtconfig')
 cwd = GetCurrentDir()
 bsp_root = os.path.dirname(cwd)
 wrapper_root = os.path.join(bsp_root, 'packages', 'FreeRTOS_Wrapper-latest', 'FreeRTOS')
-sdk_root = os.path.join(cwd, 'supplicant', 'sdk')
+sdk_root = os.path.join(cwd, 'sdk')
+wifi_back_root = cwd
 
 
 def w(*parts):
-    return os.path.join(cwd, *parts)
+    return os.path.join(wifi_back_root, *parts)
+
+
+def wb(*parts):
+    return w(*parts)
 
 
 def collect_c(root):
@@ -61,12 +66,12 @@ src_platform = [
 # The prebuilt supplicant archive replaces the complete SDK supplicant source
 # tree. These small SDK adapters are still needed for PTIM and scan commands.
 src_sdk = [
-    w('supplicant', 'sdk', 'interfaces', 'wifi', 'ptimg', 'ptim.c'),
-    w('supplicant', 'sdk', 'interfaces', 'wifi', 'ptimg', 'ptim_loader.c'),
-    w('supplicant', 'sdk', 'interfaces', 'wifi', 'stack', 'wpa_cli', 'wpa_cli.c'),
-    w('supplicant', 'sdk', 'interfaces', 'wifi', 'stack', 'wpa_cli', 'wpa_ctrl.c'),
-    w('supplicant', 'sdk', 'interfaces', 'wifi', 'system', 'src', 'common', 'util_api.c'),
-    w('supplicant', 'sdk', 'middleware', 'osal', 'msg_queues.c'),
+    w('sdk', 'interfaces', 'wifi', 'ptimg', 'ptim.c'),
+    w('sdk', 'interfaces', 'wifi', 'ptimg', 'ptim_loader.c'),
+    w('sdk', 'interfaces', 'wifi', 'stack', 'wpa_cli', 'wpa_cli.c'),
+    w('sdk', 'interfaces', 'wifi', 'stack', 'wpa_cli', 'wpa_ctrl.c'),
+    w('sdk', 'interfaces', 'wifi', 'system', 'src', 'common', 'util_api.c'),
+    w('sdk', 'middleware', 'osal', 'msg_queues.c'),
 ]
 
 # RT-Thread supplies the lwIP core and sys_arch implementation. Only the
@@ -241,9 +246,10 @@ src_crypto += [os.path.join(cc312_root, source[len(cc312_prefix):])
 src_rtos_hal = collect_c(os.path.join(bsp_root, 'ra', 'fsp', 'src', 'r_rtc_w'))
 src_rtos_hal += collect_c(os.path.join(bsp_root, 'ra', 'fsp', 'src', 'r_wdog_w'))
 # Build the standalone cfg80211 demo. It does not instantiate supplicant or
-# call the original WIFI_/rm_wifi_* service layer.
-src_app = [w('app', 'wifi_fc80211_demo.c'),
-           w('app', 'wifi_crypto_port.c')]
+# call the original WIFI_/rm_wifi_* service layer. All Wi-Fi-specific source,
+# header and archive inputs are owned by this directory.
+src_app = [wb('apps', 'wifi_fc80211_demo.c'),
+           wb('port', 'wifi_crypto_port.c')]
 
 rt_lwip_root = os.path.join(RTT_ROOT, 'components', 'net', 'lwip')
 include_roots = [
@@ -259,8 +265,8 @@ include_roots = [
     w('platform', 'rm_lwip_w', 'ext', 'inc'),
     w('platform', 'rm_lwip_w', 'apps', 'include'),
     w('platform', 'rm_lwip_w', 'apps', 'dhcpserver'),
-    # Legacy declarations only. No vendor lwIP core source is built.
-    w('protocol', 'lwip', 'src', 'include', 'lwip', 'apps'),
+    w('include'),
+    w('platform'),
     os.path.join(rt_lwip_root, 'port'),
     os.path.join(rt_lwip_root, 'lwip-2.1.2', 'src', 'include'),
     os.path.join(rt_lwip_root, 'lwip-2.1.2', 'src', 'include', 'netif'),
@@ -269,7 +275,8 @@ include_roots = [
     w('crypto', 'mbedtls', 'include', 'psa'),
     w('crypto', 'mbedtls'),
     w('crypto', 'mbedtls', 'library'),
-    w('supplicant', 'sdk'),
+    wb('port'),
+    w('sdk'),
     os.path.join(wrapper_root, 'include', 'freertos'),
     os.path.join(wrapper_root, 'include'),
     os.path.join(wrapper_root, 'portable', 'rt-thread'),
@@ -328,7 +335,7 @@ group += DefineGroup('WiFiLwIPAdapter', src_wifi_lwip, depend=['RT_USING_LWIP'],
                      LOCAL_CPPPATH=cpppath, LOCAL_CPPDEFINES=cppdefines)
 group += DefineGroup('WiFiCrypto', src_crypto, depend=[''],
                      LOCAL_CPPPATH=cpppath, LOCAL_CPPDEFINES=cppdefines,
-                     LOCAL_CCFLAGS='-Os')
+                     LOCAL_CCFLAGS=' -Os')
 group += DefineGroup('WiFiRTOSHal', src_rtos_hal, depend=[''],
                      LOCAL_CPPPATH=cpppath, LOCAL_CPPDEFINES=cppdefines)
 group += DefineGroup('WiFiApp', src_app, depend=[''],
@@ -337,7 +344,7 @@ group += DefineGroup('WiFiApp', src_app, depend=[''],
 # The archives contain the MAC, ROMAC, driver and supplicant implementation.
 driver_libs = ['macsw', 'rwnx_drv', 'romaclib', 'supplicant', 'r_cc312_property_w']
 group += DefineGroup('WiFiDriver', [], depend=[''],
-                     LIBPATH=[w('driver')], LIBS=driver_libs,
+                     LIBPATH=[wb('libs')], LIBS=driver_libs,
                      # Keep the MIB object reachable after the CLI sources are removed.
                      LINKFLAGS=' -Wl,-u,machw_mib')
 

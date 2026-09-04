@@ -12,6 +12,10 @@ src = Glob('./src/*.c')
 group = DefineGroup('Applications', src, depend = [''], CPPPATH = CPPPATH)
 
 for d in list:
+    if d == 'wifi':
+        # The active Wi-Fi tree is wifi_back. Keep wifi/SConscript available
+        # for legacy callers, but do not build both trees in this BSP.
+        continue
     path = os.path.join(cwd, d)
     if os.path.isfile(os.path.join(path, 'SConscript')):
         group = group + SConscript(os.path.join(d, 'SConscript'))
