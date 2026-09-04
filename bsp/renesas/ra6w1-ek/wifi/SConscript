@@ -243,8 +243,7 @@ src_rtos_hal += collect_c(os.path.join(bsp_root, 'ra', 'fsp', 'src', 'r_wdog_w')
 # Build the standalone cfg80211 demo. It does not instantiate supplicant or
 # call the original WIFI_/rm_wifi_* service layer.
 src_app = [w('app', 'wifi_fc80211_demo.c'),
-           w('app', 'wifi_crypto_port.c'),
-           w('app', 'wifi_cfg_api_test.c')]
+           w('app', 'wifi_crypto_port.c')]
 
 rt_lwip_root = os.path.join(RTT_ROOT, 'components', 'net', 'lwip')
 include_roots = [

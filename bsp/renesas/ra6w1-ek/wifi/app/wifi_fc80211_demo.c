@@ -81,10 +81,8 @@ extern int fc80211_free_umac_scan_results(ULONG wdev_id, int ifidx);
 struct wifi_demo_state
 {
     bool event_queue_ready;
-    bool cfg80211_ready;
     bool crypto_ready;
     bool hardware_ready;
-    bool wiphy_ready;
     bool iface_ready;
     bool scan_active;
     bool scan_done;
@@ -101,19 +99,12 @@ struct wifi_demo_state
 
 static struct wifi_demo_state s_wifi_demo;
 
-/* rsdev_cfg80211_associate() converts the supplicant ABI into a temporary
- * cfg80211_connect_params object and then calls rdev_connect().  Keep the
- * input objects static because this demo waits for the asynchronous result
- * after the call returns. */
-static struct fc80211_global *s_connect_global;
-static struct i802_bss *s_connect_bss;
-static struct wpa_driver_fc80211_data *s_connect_driver;
-static struct wpa_driver_associate_params s_connect_assoc;
+/* Keep the direct cfg80211 request objects static because the driver reports
+ * the result asynchronously after rwnx_cfg80211_connect() returns. */
+static struct cfg80211_connect_params s_connect_cfg;
 static char s_connect_ssid[WIFI_DEMO_MAX_SSID_LEN + 1U];
 static u8 s_connect_psk[WIFI_DEMO_PSK_LEN];
 static u8 s_connect_target_bssid[ETH_ALEN];
-static bool s_connect_target_bssid_set;
-static unsigned int s_connect_target_freq;
 
 static void wifi_demo_print_bssid(const u8 *bssid);
 
@@ -527,9 +518,9 @@ static void wifi_demo_free_scan_results(struct wifi_demo_scan_results *results)
         return;
     }
 
-    for (index = 0U; index < results->num; index++)
+    if (results->res != NULL)
     {
-        if (results->res != NULL)
+        for (index = 0U; index < results->num; index++)
         {
             vPortFree(results->res[index]);
         }
@@ -608,7 +599,6 @@ static int wifi_demo_start(void)
         rt_kprintf("[wifi-demo] cfg80211 response queue init failed\n");
         return -RT_ERROR;
     }
-    s_wifi_demo.cfg80211_ready = true;
     rt_kprintf("[wifi-demo] cfg80211 response queue ready: %p\n",
                CFG80211_semaphore);
 
@@ -967,11 +957,6 @@ static int wifi_demo_parse_bssid(const char *text, u8 *bssid)
         }
     }
 
-    if (text[17U] != '\0')
-    {
-        return -RT_EINVAL;
-    }
-
     return RT_EOK;
 }
 
@@ -996,63 +981,58 @@ static int wifi_demo_parse_frequency(const char *text, unsigned int *freq)
     return RT_EOK;
 }
 
-/* The normal SDK creates this complete context before association.  In
- * particular, rsdev_cfg80211_associate() relies on the driver object having a
- * valid first_bss/capability relationship even though its immediate lookup
- * uses only ifindex. */
-static int wifi_demo_prepare_connect_driver(void)
+static int wifi_demo_parse_target(const char *freq_text,
+                                  const char *bssid_text,
+                                  unsigned int *freq, u8 *bssid)
 {
-    struct wireless_dev *active_wdev;
+    int status;
 
-    if ((s_connect_driver != NULL) && (s_connect_bss != NULL) &&
-        (s_connect_global != NULL))
+    status = wifi_demo_parse_frequency(freq_text, freq);
+    if (status != RT_EOK)
     {
-        return RT_EOK;
+        rt_kprintf("[wifi-demo] invalid frequency: %s\n", freq_text);
+        return status;
     }
 
-    if (s_connect_global == NULL)
+    status = wifi_demo_parse_bssid(bssid_text, bssid);
+    if (status != RT_EOK)
     {
-        s_connect_global = fc80211_global_init();
-        if (s_connect_global == NULL)
+        rt_kprintf("[wifi-demo] invalid BSSID: %s\n", bssid_text);
+        return status;
+    }
+
+    return RT_EOK;
+}
+
+static struct ieee80211_channel *wifi_demo_find_channel(unsigned int freq)
+{
+    unsigned int band_index;
+
+    for (band_index = FC80211_BAND_2GHZ;
+         band_index <= FC80211_BAND_5GHZ; band_index++)
+    {
+        struct ieee80211_supported_band *band = rwnx_wiphy.bands[band_index];
+        int channel_index;
+
+        if ((band == NULL) || (band->channels == NULL))
         {
-            rt_kprintf("[wifi-demo] fc80211 global init failed\n");
-            return -RT_ENOMEM;
+            continue;
+        }
+
+        for (channel_index = 0; channel_index < band->n_channels;
+             channel_index++)
+        {
+            struct ieee80211_channel *channel = &band->channels[channel_index];
+
+            if ((channel->center_freq == freq) &&
+                ((channel->flags & WIFI_DEMO_CHAN_DISABLED) == 0U))
+            {
+                return channel;
+            }
         }
     }
 
-    s_connect_bss = (struct i802_bss *)
-        wpa_driver_fc80211_init(NULL, WIFI_DEMO_IF_NAME, s_connect_global);
-    if ((s_connect_bss == NULL) || (s_connect_bss->drv == NULL))
-    {
-        rt_kprintf("[wifi-demo] fc80211 driver context init failed\n");
-        s_connect_bss = NULL;
-        s_connect_driver = NULL;
-        return -RT_ERROR;
-    }
-
-    s_connect_driver = s_connect_bss->drv;
-    active_wdev = fc80211_wdev_from_if_idx(WIFI_DEMO_IF_INDEX);
-    if ((active_wdev == NULL) ||
-        (active_wdev->wiphy != &rwnx_wiphy) ||
-        (s_connect_bss->ifindex != (int) WIFI_DEMO_IF_INDEX) ||
-        (s_connect_driver->ifindex != (int) WIFI_DEMO_IF_INDEX) ||
-        (s_connect_driver->first_bss != s_connect_bss))
-    {
-        rt_kprintf("[wifi-demo] invalid connect context: wdev=%p bss=%p "
-                   "drv=%p first_bss=%p ifindex=%d/%d\n",
-                   active_wdev, s_connect_bss, s_connect_driver,
-                   s_connect_driver->first_bss,
-                   s_connect_bss->ifindex, s_connect_driver->ifindex);
-        return -RT_ERROR;
-    }
-
-    s_wifi_demo.wdev = active_wdev;
-    rt_kprintf("[wifi-demo] connect context ready: global=%p bss=%p "
-               "drv=%p wdev_id=%lu capa=0x%08x\n",
-               s_connect_global, s_connect_bss, s_connect_driver,
-               (unsigned long) s_connect_bss->wdev_id,
-               (unsigned int) s_connect_driver->capa.flags);
-    return RT_EOK;
+    return NULL;
 }
 
 static int wifi_demo_connect_request(const char *ssid, const u8 *psk,
@@ -1105,14 +1085,8 @@ static int wifi_demo_connect_request(const char *ssid, const u8 *psk,
         return -RT_EBUSY;
     }
 
-    status = wifi_demo_prepare_connect_driver();
-    if (status != RT_EOK)
-    {
-        return status;
-    }
-
     /* Copy command-line data into storage that outlives this msh command.
-     * The converted cfg80211 request is asynchronous after rsdev returns. */
+     * The direct cfg80211 request remains live until its asynchronous event. */
     memcpy(s_connect_ssid, ssid, ssid_len);
     s_connect_ssid[ssid_len] = '\0';
     if (secure)
@@ -1124,9 +1098,7 @@ static int wifi_demo_connect_request(const char *ssid, const u8 *psk,
         memset(s_connect_psk, 0, sizeof(s_connect_psk));
     }
 
-    s_connect_target_freq = freq;
-    s_connect_target_bssid_set = (bssid != NULL);
-    if (s_connect_target_bssid_set)
+    if (bssid != NULL)
     {
         memcpy(s_connect_target_bssid, bssid,
                sizeof(s_connect_target_bssid));
@@ -1137,32 +1109,40 @@ static int wifi_demo_connect_request(const char *ssid, const u8 *psk,
                sizeof(s_connect_target_bssid));
     }
 
-    memset(&s_connect_assoc, 0, sizeof(s_connect_assoc));
+    memset(&s_connect_cfg, 0, sizeof(s_connect_cfg));
+    if (freq != 0U)
+    {
+        s_connect_cfg.channel = wifi_demo_find_channel(freq);
+        if (s_connect_cfg.channel == NULL)
+        {
+            rt_kprintf("[wifi-demo] frequency %u is not an enabled wiphy "
+                       "channel\n", freq);
+            return -RT_EINVAL;
+        }
+    }
 
-    /* These are the values supplied by wpa_supplicant for a WPA2-PSK
-     * infrastructure association.  The vendor conversion maps them to the
-     * cfg80211 crypto suite selectors used by rwnx. */
-    s_connect_assoc.ssid = (const u8 *) s_connect_ssid;
-    s_connect_assoc.ssid_len = ssid_len;
-    s_connect_assoc.bssid = s_connect_target_bssid_set ?
+    s_connect_cfg.bssid = (bssid != NULL) ?
         s_connect_target_bssid : NULL;
-    s_connect_assoc.freq.freq = (int) s_connect_target_freq;
-    s_connect_assoc.wpa_ie = NULL;
-    s_connect_assoc.wpa_ie_len = 0U;
-    s_connect_assoc.wpa_proto = WPA_PROTO_RSN;
-    s_connect_assoc.pairwise_suite = WPA_CIPHER_CCMP;
-    s_connect_assoc.group_suite = WPA_CIPHER_CCMP;
-    s_connect_assoc.mgmt_group_suite = 0U;
-    s_connect_assoc.key_mgmt_suite = WPA_KEY_MGMT_PSK;
-    s_connect_assoc.auth_alg = WPA_AUTH_ALG_OPEN;
-    s_connect_assoc.mode = IEEE80211_MODE_INFRA;
-    s_connect_assoc.mgmt_frame_protection = NO_MGMT_FRAME_PROTECTION;
+    s_connect_cfg.ssid = (const u8 *) s_connect_ssid;
+    s_connect_cfg.ssid_len = ssid_len;
+    s_connect_cfg.auth_type = FC80211_AUTHTYPE_OPEN_SYSTEM;
+    s_connect_cfg.mgmt_frame_protection = FC80211_MFP_NO;
 
     if (secure)
     {
-        s_connect_assoc.wpa_ie = s_connect_rsn_ie;
-        s_connect_assoc.wpa_ie_len = sizeof(s_connect_rsn_ie);
-        s_connect_assoc.psk = s_connect_psk;
+        s_connect_cfg.ie = s_connect_rsn_ie;
+        s_connect_cfg.ie_len = sizeof(s_connect_rsn_ie);
+        s_connect_cfg.crypto.wpa_versions = FC80211_WPA_VERSION_2;
+        s_connect_cfg.crypto.control_port = true;
+        s_connect_cfg.crypto.control_port_ethertype = cpu_to_be16(0x888eU);
+        s_connect_cfg.crypto.control_port_no_encrypt = false;
+        s_connect_cfg.crypto.cipher_group = RSN_CIPHER_SUITE_CCMP;
+        s_connect_cfg.crypto.n_ciphers_pairwise = 1;
+        s_connect_cfg.crypto.ciphers_pairwise[0] = RSN_CIPHER_SUITE_CCMP;
+        s_connect_cfg.crypto.n_akm_suites = 1;
+        s_connect_cfg.crypto.akm_suites[0] =
+            RSN_AUTH_KEY_MGMT_PSK_OVER_802_1X;
+        s_connect_cfg.crypto.psk = s_connect_psk;
     }
 
     wifi_demo_pump_events();
@@ -1173,18 +1153,8 @@ static int wifi_demo_connect_request(const char *ssid, const u8 *psk,
     memset(s_wifi_demo.connect_bssid, 0,
            sizeof(s_wifi_demo.connect_bssid));
 
-    /* This is the state update performed by
-     * wpa_driver_fc80211_associate() immediately before its rsdev call. */
-    fc80211_mark_disconnected(s_connect_driver);
-    s_connect_driver->assoc_freq = s_connect_assoc.freq.freq > 0 ?
-        (unsigned int) s_connect_assoc.freq.freq : 0U;
-    memcpy(s_connect_driver->ssid, s_connect_assoc.ssid,
-           s_connect_assoc.ssid_len);
-    s_connect_driver->ssid_len = s_connect_assoc.ssid_len;
-
-    rt_kprintf("[wifi-demo] associate target: freq=%u BSSID=",
-               s_connect_target_freq);
-    if (s_connect_target_bssid_set)
+    rt_kprintf("[wifi-demo] direct connect target: freq=%u BSSID=", freq);
+    if (s_connect_cfg.bssid != NULL)
     {
         wifi_demo_print_bssid(s_connect_target_bssid);
     }
@@ -1194,12 +1164,23 @@ static int wifi_demo_connect_request(const char *ssid, const u8 *psk,
     }
     rt_kprintf("\n");
 
-    request_status = rsdev_cfg80211_associate(s_connect_driver,
-                                              &s_connect_assoc);
-    rt_kprintf("[wifi-demo] rsdev_cfg80211_associate: ssid=\"%s\" "
-               "mode=%s return=%d (completion is asynchronous)\n",
+    request_status = rwnx_cfg80211_connect(
+        (u8) WIFI_DEMO_IF_INDEX, (u8) FC80211_IFTYPE_STATION,
+        &s_connect_cfg);
+    rt_kprintf("[wifi-demo] rwnx_cfg80211_connect: ssid=\"%s\" "
+               "mode=%s freq=%u channel=%p ie_len=%lu return=%d "
+               "(completion is asynchronous)\n",
                s_connect_ssid, secure ? "WPA2-PSK" : "OPEN",
-               request_status);
+               freq, s_connect_cfg.channel,
+               (unsigned long) s_connect_cfg.ie_len, request_status);
+
+    if (request_status != 0)
+    {
+        s_wifi_demo.connect_active = false;
+        rt_kprintf("[wifi-demo] direct connect request failed: %d\n",
+                   request_status);
+        return request_status;
+    }
 
     for (waited_ms = 0U; waited_ms < WIFI_DEMO_CONNECT_WAIT_MS;
          waited_ms += WIFI_DEMO_POLL_MS)
@@ -1256,17 +1237,9 @@ static int wifi_low_connect(int argc, char **argv)
 
     if (argc == 5)
     {
-        status = wifi_demo_parse_frequency(argv[3], &freq);
+        status = wifi_demo_parse_target(argv[3], argv[4], &freq, bssid);
         if (status != RT_EOK)
         {
-            rt_kprintf("[wifi-demo] invalid frequency: %s\n", argv[3]);
-            return status;
-        }
-
-        status = wifi_demo_parse_bssid(argv[4], bssid);
-        if (status != RT_EOK)
-        {
-            rt_kprintf("[wifi-demo] invalid BSSID: %s\n", argv[4]);
             return status;
         }
         bssid_arg = bssid;
@@ -1296,17 +1269,9 @@ static int wifi_low_connect_open(int argc, char **argv)
 
     if (argc == 4)
     {
-        status = wifi_demo_parse_frequency(argv[2], &freq);
+        status = wifi_demo_parse_target(argv[2], argv[3], &freq, bssid);
         if (status != RT_EOK)
         {
-            rt_kprintf("[wifi-demo] invalid frequency: %s\n", argv[2]);
-            return status;
-        }
-
-        status = wifi_demo_parse_bssid(argv[3], bssid);
-        if (status != RT_EOK)
-        {
-            rt_kprintf("[wifi-demo] invalid BSSID: %s\n", argv[3]);
             return status;
         }
         bssid_arg = bssid;

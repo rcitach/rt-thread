@@ -62,10 +62,12 @@ keeps a local ABI-matched adapter and never passes a public
 
 ### Connection test
 
-The same file exports a direct cfg80211 connection test. The request is sent
-to the driver task and the command waits for the asynchronous
-`FC80211_CMD_CONNECT` completion event. Use an open network to test the link
-without any key material:
+The same file exports a direct cfg80211 connection test. The command builds a
+`struct cfg80211_connect_params` locally and calls the lower-level
+`rwnx_cfg80211_connect()` entry point directly. The request is sent to the
+driver task and the command waits for the asynchronous `FC80211_CMD_CONNECT`
+completion event. Use an open network to test the link without any key
+material:
 
 ```text
 msh /> wifi_low_connect_open <ssid>
@@ -93,7 +95,9 @@ msh /> wifi_low_connect xiaomi password 2437 12:34:56:78:9A:BC
 
 The open-network command accepts the same optional target pair. The original
 SDK normally fills these two values from the selected scan result before
-calling `rsdev_cfg80211_associate()`.
+converting the request through `rsdev_cfg80211_associate()`. This demo passes
+them directly in `cfg80211_connect_params`, so the conversion layer is not
+part of the test.
 
 The demo derives a password with WPA's PBKDF2-HMAC-SHA1 procedure locally and
 keeps the resulting 32-byte PMK in the association context. The first
