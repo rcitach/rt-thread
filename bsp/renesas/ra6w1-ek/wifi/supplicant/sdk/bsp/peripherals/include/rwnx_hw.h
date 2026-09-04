@@ -57,7 +57,6 @@ void rwnx_hw_power_up_pllon(uint32_t powerup_mode, int32_t clk);
 void rwnx_hw_power_up_plloff(void);
 void rwnx_hw_sleep(uint8_t sleep_type);
 void rwnx_hw_wakeup(uint8_t sleep_type);
-int rwnx_hw_get_status(void);
 
 /**
  ****************************************************************************************

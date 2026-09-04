@@ -32,7 +32,9 @@ def collect_dirs(root):
     return result
 
 
-# Only the RM Wi-Fi service and startup dependencies are compiled here.
+# Platform objects required by the prebuilt archives.  The application itself
+# does not call the RM Wi-Fi service entry points; these objects provide the
+# compatibility symbols that the vendor archives may reference.
 src_platform = [
     w('platform', 'wifi_instances.c'),
     w('platform', 'wifi_hw_prepare.c'),
@@ -211,6 +213,7 @@ cc312_required_sources = [
     "platform/r_cc312_openable_w/codesafe/crypto_api/rsa/cc_rsa_sign.c",
     "platform/r_cc312_openable_w/codesafe/crypto_api/rsa/cc_rsa_verify.c",
     "platform/r_cc312_openable_w/crypto_primitives.c",
+    "platform/r_cc312_openable_w/r_cc312_crypto_runtime.c",
     "platform/r_cc312_openable_w/host/cc3x_lib/cc_lib.c",
     "platform/r_cc312_openable_w/host/cc3x_lib/cc_rng_plat.c",
     "platform/r_cc312_openable_w/host/cc3x_lib/cc_util_cmac.c",
@@ -222,6 +225,7 @@ cc312_required_sources = [
     "platform/r_cc312_openable_w/host/pal/freertos/cc_pal_dma.c",
     "platform/r_cc312_openable_w/host/pal/freertos/cc_pal_interrupt_ctrl.c",
     "platform/r_cc312_openable_w/host/pal/freertos/cc_pal_mem.c",
+    "platform/r_cc312_openable_w/host/pal/freertos/cc_pal_memmap.c",
     "platform/r_cc312_openable_w/host/pal/freertos/cc_pal_mutex.c",
     "platform/r_cc312_openable_w/host/pal/freertos/cc_pal_pm.c",
     "platform/r_cc312_openable_w/r_cc312_crypto_secureboot.c",
@@ -236,9 +240,11 @@ src_crypto += [os.path.join(cc312_root, source[len(cc312_prefix):])
 
 src_rtos_hal = collect_c(os.path.join(bsp_root, 'ra', 'fsp', 'src', 'r_rtc_w'))
 src_rtos_hal += collect_c(os.path.join(bsp_root, 'ra', 'fsp', 'src', 'r_wdog_w'))
-# Keep the application entry focused on hardware bring-up. The full
-# scan/connect sample remains in wifi_app.c for later use.
-src_app = [w('app', 'wifi_hw_test.c')]
+# Build the standalone cfg80211 demo. It does not instantiate supplicant or
+# call the original WIFI_/rm_wifi_* service layer.
+src_app = [w('app', 'wifi_fc80211_demo.c'),
+           w('app', 'wifi_crypto_port.c'),
+           w('app', 'wifi_cfg_api_test.c')]
 
 rt_lwip_root = os.path.join(RTT_ROOT, 'components', 'net', 'lwip')
 include_roots = [

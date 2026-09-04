@@ -34,45 +34,97 @@ scons -j4
 The build produces `rtthread.elf`, `rtthread.bin`, `rtthread.hex` and the
 RA6W1 flash image.
 
-## Hardware bring-up test
+## Standalone cfg80211 demo
 
-The current application entry is `app/wifi_hw_test.c`. It does not call
-`WIFI_On()`, connect, or start the network stack. The `wifi_hw_up_test`
-RT-Thread shell command performs the reset-time ROMAC/PTIM setup, starts the
-MAC and driver tasks, and polls `rwnx_hw_get_status()` for `DRIVER_ACTIVE`.
+The current application entry is `app/wifi_fc80211_demo.c`. It does not create
+a `wpa_supplicant` context and does not call `WIFI_*` or `rm_wifi_*` service
+APIs. It performs the platform/ROMAC setup, starts the MAC and driver tasks,
+creates a station interface, sends a scan through `rsdev_cfg80211_scan()`,
+receives the asynchronous completion event, and reads the BSS records.
+Before using public connect/disconnect operations it also explicitly creates
+the vendor cfg80211 response queue with `rwnx_cfg80211_initialize()`; the
+original supplicant startup normally performs this step indirectly.
 
-After flashing, run:
-
-```text
-msh /> wifi_hw_up_test
-```
-
-`[wifi-hw] PASS: driver active ...` proves that the driver reached the active
-state. A MAC-task or driver-task error indicates RTOS/task initialization
-failure; a final status timeout means the hardware power-up path did not reach
-the active state. The command is intended to run once after reset because it
-creates the Wi-Fi MAC and driver tasks without a matching teardown command.
-
-The previous scan/connect example remains in `app/wifi_app.c` and can be
-restored later by changing `src_app` in `wifi/SConscript`.
-
-The low-level scan test is also exported from `app/wifi_hw_test.c`. It does
-not call `WIFI_On()` or `WIFI_Scan()`. Instead it initializes the driver's
-cfg80211 data, creates a station interface, sends a scan request through the
-MAC task, and reads the resulting BSS records:
+After flashing, run either the new names or their compatibility aliases:
 
 ```text
-msh /> wifi_hw_get_mac
-msh /> wifi_hw_scan
+msh /> wifi_low_init
+msh /> wifi_low_scan
 ```
 
-`wifi_hw_scan` scans the channels advertised by the driver's 2.4 GHz and
-5 GHz band tables. It waits eight seconds for the asynchronous scan and then
-prints BSSID, frequency, RSSI and SSID. Run it only after a successful
-`wifi_hw_up_test` in the same boot. The test keeps the vendor
-`global -> driver -> bss -> wdev` objects for the lifetime of the image; the
-low-level driver owns the temporary cfg80211 request and releases it from the
-scan-completion path.
+The aliases `wifi_demo_init` and `wifi_demo_scan` are also exported for
+existing scripts. `wifi_low_scan` enumerates enabled channels from both the
+driver's 2.4 GHz and 5 GHz band tables, passes an explicit frequency list, and
+prints BSSID, frequency, RSSI and SSID. The shipped `librwnx_drv.a` has a
+private host-side scan-parameter ABI behind `rsdev_cfg80211_scan()`; the demo
+keeps a local ABI-matched adapter and never passes a public
+`struct cfg80211_scan_request` directly to `rwnx_cfg80211_scan()`.
+
+### Connection test
+
+The same file exports a direct cfg80211 connection test. The request is sent
+to the driver task and the command waits for the asynchronous
+`FC80211_CMD_CONNECT` completion event. Use an open network to test the link
+without any key material:
+
+```text
+msh /> wifi_low_connect_open <ssid>
+msh /> wifi_low_status
+msh /> wifi_low_disconnect
+```
+
+For WPA2-Personal, pass either the normal 8..63 byte password or a raw
+32-byte PSK/PMK as exactly 64 hexadecimal characters:
+
+```text
+msh /> wifi_low_connect <ssid> <password|psk_hex64>
+msh /> wifi_low_status
+msh /> wifi_low_disconnect
+```
+
+When scanning is intentionally omitted, provide the AP's exact center
+frequency and BSSID so the firmware does not have to select an AP from
+`bssid=NULL, freq=0`:
+
+```text
+msh /> wifi_low_connect <ssid> <password|psk_hex64> <freq_mhz> <bssid>
+msh /> wifi_low_connect xiaomi password 2437 12:34:56:78:9A:BC
+```
+
+The open-network command accepts the same optional target pair. The original
+SDK normally fills these two values from the selected scan result before
+calling `rsdev_cfg80211_associate()`.
+
+The demo derives a password with WPA's PBKDF2-HMAC-SHA1 procedure locally and
+keeps the resulting 32-byte PMK in the association context. The first
+password-form request registers the Mbed TLS/CryptoCell platform callbacks and
+executes the original `R_CC312_Crypto_Init()` sequence; a raw 64-digit PSK
+bypasses this derivation step. It does not create a supplicant context or run
+the WPA four-way handshake, so a successful low-level association alone is not
+the same as a fully authenticated WPA2 data link. An unsuccessful request
+prints the IEEE status code or a 15-second completion timeout.
+
+## cfg80211 API probe
+
+`app/wifi_cfg_api_test.c` exports `wifi_cfg_api_test`. It references every
+external declaration in `rwnx_cfg.h` so a missing archive symbol is detected at
+link time, calls only low-risk operations with the initialized idle station,
+and reports connection/AP/management-frame/event callbacks as `SKIP` with the
+reason they need real state. Use:
+
+```text
+msh /> wifi_cfg_api_test
+msh /> wifi_cfg_api_test scan
+```
+
+The `scan` argument runs the asynchronous scan adapter as an additional test.
+The probe intentionally does not fabricate connect, AP, key, management-frame
+or firmware-event payloads; those tests must be added around a real connection
+or AP state to avoid changing RF state or dereferencing an invalid ABI.
+
+The older `app/wifi_hw_test.c` remains in the tree as a diagnostic reference,
+but it is not the application selected by `wifi/SConscript` and it creates the
+supplicant driver's `global -> driver -> bss` context.
 
 ## RT-Thread lwIP boundary
 
