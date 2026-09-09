@@ -17,6 +17,7 @@
 #include <mm_aspace.h>
 #include "sbi.h"
 #include "riscv_mmu.h"
+#include "cpuport.h"
 
 #define HANDLE_FAULT(ret)                                                      \
     if (__builtin_expect((ret) != SBI_SUCCESS, 0))                             \
@@ -36,12 +37,26 @@ static inline void rt_hw_tlb_invalidate_all_local(void)
 static inline void rt_hw_tlb_invalidate_aspace(rt_aspace_t aspace)
 {
     // TODO ASID
+#ifdef RT_USING_SMP
+    uintptr_t mask = rt_hw_atomic_load((volatile rt_atomic_t *)&rt_riscv_online_mask);
+    HANDLE_FAULT(sbi_remote_sfence_vma(&mask, 0, 0, (unsigned long)-1));
+#else
     rt_hw_tlb_invalidate_all_local();
+#endif
 }
 
 static inline void rt_hw_tlb_invalidate_page(rt_aspace_t aspace, void *start)
 {
+#ifdef RT_USING_SMP
+    uintptr_t mask = rt_hw_atomic_load((volatile rt_atomic_t *)&rt_riscv_online_mask);
+    if (mask != 0)
+    {
+        HANDLE_FAULT(sbi_remote_sfence_vma(&mask, 0, (unsigned long)start,
+                                           ARCH_PAGE_SIZE));
+    }
+#else
     __asm__ volatile("sfence.vma %0, zero" ::"r"(start) : "memory");
+#endif
 }
 
 static inline void rt_hw_tlb_invalidate_range(rt_aspace_t aspace, void *start,

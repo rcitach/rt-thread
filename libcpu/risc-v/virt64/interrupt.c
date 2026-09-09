@@ -20,7 +20,7 @@ struct rt_irq_desc irq_desc[MAX_HANDLERS];
 #ifdef RT_USING_SMP
 #include "sbi.h"
 struct rt_irq_desc ipi_desc[RT_MAX_IPI];
-uint8_t ipi_vectors[RT_CPUS_NR] = { 0 };
+static rt_atomic_t ipi_vectors[RT_CPUS_NR] = { 0 };
 #endif /* RT_USING_SMP */
 
 static rt_isr_handler_t rt_hw_interrupt_handle(rt_uint32_t vector, void *param)
@@ -181,31 +181,56 @@ void rt_hw_spin_unlock(rt_hw_spinlock_t *lock)
 
 void rt_hw_ipi_send(int ipi_vector, unsigned int cpu_mask)
 {
-    int cpuid = __builtin_ctz(cpu_mask); // get the bit position of the lowest set bit
-    ipi_vectors[cpuid] |= (uint8_t)ipi_vector;
-    sbi_send_ipi((const unsigned long *)&cpu_mask);
+    unsigned long hart_mask;
+
+    cpu_mask &= RT_CPU_MASK;
+    cpu_mask &= (unsigned int)rt_hw_atomic_load(
+        (volatile rt_atomic_t *)&rt_riscv_online_mask);
+    if (ipi_vector < 0 || ipi_vector >= RT_MAX_IPI || cpu_mask == 0)
+    {
+        return;
+    }
+
+    hart_mask = cpu_mask;
+
+    for (int cpuid = 0; cpuid < RT_CPUS_NR; cpuid++)
+    {
+        if (cpu_mask & (1U << cpuid))
+        {
+            rt_hw_atomic_or(&ipi_vectors[cpuid],
+                            ((rt_atomic_t)1U << ipi_vector));
+        }
+    }
+
+    sbi_send_ipi(&hart_mask);
 }
 
 void rt_hw_ipi_init(void)
 {
-    int idx = 0, cpuid = rt_cpu_get_id();
-    ipi_vectors[cpuid] = 0;
-    /* init exceptions table */
-    for (idx = 0; idx < RT_MAX_IPI; idx++)
+    static rt_bool_t desc_inited = RT_FALSE;
+    int cpuid = rt_cpu_get_id();
+
+    if (!desc_inited)
     {
-        ipi_desc[idx].handler = RT_NULL;
-        ipi_desc[idx].param = RT_NULL;
+        for (int idx = 0; idx < RT_MAX_IPI; idx++)
+        {
+            ipi_desc[idx].handler = RT_NULL;
+            ipi_desc[idx].param = RT_NULL;
 #ifdef RT_USING_INTERRUPT_INFO
-        rt_snprintf(ipi_desc[idx].name, RT_NAME_MAX - 1, "default");
-        ipi_desc[idx].counter = 0;
+            rt_snprintf(ipi_desc[idx].name, RT_NAME_MAX - 1, "default");
+            ipi_desc[idx].counter = 0;
 #endif
+        }
+        desc_inited = RT_TRUE;
     }
+
+    rt_hw_atomic_store(&ipi_vectors[cpuid], 0);
     set_csr(sie, SIP_SSIP);
 }
 
 void rt_hw_ipi_handler_install(int ipi_vector, rt_isr_handler_t ipi_isr_handler)
 {
-    if (ipi_vector < RT_MAX_IPI)
+    if (ipi_vector >= 0 && ipi_vector < RT_MAX_IPI)
     {
         if (ipi_isr_handler != RT_NULL)
         {
@@ -217,22 +242,36 @@ void rt_hw_ipi_handler_install(int ipi_vector, rt_isr_handler_t ipi_isr_handler)
 
 void rt_hw_ipi_handler(void)
 {
-    rt_uint32_t ipi_vector;
+    int cpuid = rt_cpu_get_id();
 
-    ipi_vector = ipi_vectors[rt_cpu_get_id()];
-    while (ipi_vector)
+    for (;;)
     {
-        int bitpos = __builtin_ctz(ipi_vector);
-        ipi_vector &= ~(1 << bitpos);
-        if (bitpos < RT_MAX_IPI && ipi_desc[bitpos].handler != RT_NULL)
+        rt_atomic_t ipi_vector = rt_hw_atomic_exchange(&ipi_vectors[cpuid], 0);
+
+        if (ipi_vector == 0)
         {
-            rt_hw_atomic_and((volatile rt_atomic_t *)&ipi_vectors[rt_cpu_get_id()], ~((rt_atomic_t)(1 << bitpos)));
-            /* call the irq service routine */
-            ipi_desc[bitpos].handler(bitpos, ipi_desc[bitpos].param);
+            clear_csr(sip, SIP_SSIP);
+            if (rt_hw_atomic_load(&ipi_vectors[cpuid]) == 0)
+            {
+                break;
+            }
+            continue;
+        }
+
+        clear_csr(sip, SIP_SSIP);
+        int bitpos = __builtin_ctzl((unsigned long)ipi_vector);
+        while (ipi_vector)
+        {
+            ipi_vector &= ~((rt_atomic_t)1U << bitpos);
+            if (bitpos < RT_MAX_IPI && ipi_desc[bitpos].handler != RT_NULL)
+            {
+                ipi_desc[bitpos].handler(bitpos, ipi_desc[bitpos].param);
+            }
+            if (ipi_vector)
+            {
+                bitpos = __builtin_ctzl((unsigned long)ipi_vector);
+            }
         }
     }
-
-    // TODO: Clear the software interrupt pending bit in CLINT
-    clear_csr(sip, SIP_SSIP);
 }
 #endif /* RT_USING_SMP */

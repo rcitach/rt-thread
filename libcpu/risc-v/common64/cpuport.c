@@ -12,6 +12,7 @@
 
 #include <rthw.h>
 #include <rtthread.h>
+#include <rtatomic.h>
 
 #include "cpuport.h"
 #include "stack.h"
@@ -25,6 +26,8 @@
 #ifdef RT_USING_SMP
 #include "tick.h"
 #include "interrupt.h"
+
+volatile unsigned long rt_riscv_online_mask;
 #endif /* RT_USING_SMP */
 
 #ifdef ARCH_RISCV_FPU
@@ -92,6 +95,20 @@ int rt_hw_cpu_id(void)
     }
 #endif /* RT_USING_SMP */
 }
+
+/* Return the one-based position of the least significant set bit. */
+unsigned long __rt_ffsl(unsigned long value)
+{
+    return value ? (unsigned long)__builtin_ffsl(value) : 0;
+}
+
+#ifdef RT_USING_SMP
+void rt_hw_cpu_mark_online(void)
+{
+    rt_hw_atomic_or((volatile rt_atomic_t *)&rt_riscv_online_mask,
+                    ((rt_atomic_t)1U << rt_hw_cpu_id()));
+}
+#endif
 
 /**
  * This function will initialize thread stack, we assuming
@@ -211,6 +228,7 @@ void rt_hw_secondary_cpu_up(void)
         if (ret)
         {
             rt_kprintf("sbi_hsm_hart_start failed for hart %d: %d\n", hart, ret);
+            RT_ASSERT(0);
         }
     }
 }
@@ -246,6 +264,7 @@ void secondary_cpu_entry(void)
 
     /* ipi init */
     rt_hw_ipi_init();
+    rt_hw_cpu_mark_online();
 
     rt_hw_spin_lock(&_cpus_lock);
     /* invoke system scheduler start for secondary CPU */

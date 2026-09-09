@@ -73,7 +73,9 @@
 /* end of rt_strnlen options */
 /* end of klibc options */
 #define RT_NAME_MAX 24
-#define RT_CPUS_NR 1
+#define RT_USING_SMART
+#define RT_USING_SMP
+#define RT_CPUS_NR 2
 #define RT_ALIGN_SIZE 8
 #define RT_THREAD_PRIORITY_32
 #define RT_THREAD_PRIORITY_MAX 32
@@ -84,6 +86,7 @@
 #define RT_USING_IDLE_HOOK
 #define RT_IDLE_HOOK_LIST_SIZE 4
 #define IDLE_THREAD_STACK_SIZE 16384
+#define SYSTEM_THREAD_STACK_SIZE 16384
 #define RT_USING_TIMER_SOFT
 #define RT_TIMER_THREAD_PRIO 4
 #define RT_TIMER_THREAD_STACK_SIZE 16384
@@ -97,6 +100,7 @@
 #define RT_DEBUGING_ASSERT
 #define RT_DEBUGING_COLOR
 #define RT_DEBUGING_CONTEXT
+#define RT_DEBUGING_CRITICAL
 
 /* Inter-Thread communication */
 
@@ -129,6 +133,7 @@
 #define ARCH_CPU_64BIT
 #define RT_USING_CACHE
 #define ARCH_MM_MMU
+#define KERNEL_VADDR_START 0xffffffc000000000
 #define ARCH_RISCV
 #define ARCH_RISCV_FPU
 #define ARCH_RISCV64
@@ -182,6 +187,19 @@
 /* end of elm-chan's FatFs, Generic FAT Filesystem Module */
 #define RT_USING_DFS_DEVFS
 #define RT_USING_DFS_ROMFS
+#define RT_USING_DFS_PTYFS
+#define RT_USING_DFS_PROCFS
+#define RT_USING_PAGECACHE
+
+/* page cache config */
+
+#define RT_PAGECACHE_COUNT 4096
+#define RT_PAGECACHE_ASPACE_COUNT 1024
+#define RT_PAGECACHE_PRELOAD 4
+#define RT_PAGECACHE_HASH_NR 1024
+#define RT_PAGECACHE_GC_WORK_LEVEL 90
+#define RT_PAGECACHE_GC_STOP_LEVEL 70
+/* end of page cache config */
 /* end of DFS: device virtual file system */
 
 /* Device Drivers */
@@ -195,6 +213,7 @@
 #define RT_USING_SERIAL_V1
 #define RT_SERIAL_USING_DMA
 #define RT_SERIAL_RB_BUFSZ 64
+#define RT_USING_SERIAL_BYPASS
 #define RT_USING_CLOCK_TIME
 #define CLOCK_TIMER_FREQ 0
 #define RT_USING_NULL
@@ -225,6 +244,9 @@
 #define RT_USING_POSIX_STDIO
 #define RT_USING_POSIX_POLL
 #define RT_USING_POSIX_SELECT
+#define RT_USING_POSIX_EPOLL
+#define RT_USING_POSIX_SIGNALFD
+#define RT_SIGNALFD_MAX_NUM 10
 #define RT_USING_POSIX_TERMIOS
 #define RT_USING_POSIX_AIO
 #define RT_USING_POSIX_DELAY
@@ -329,10 +351,29 @@
 
 /* end of Debugging */
 /* end of Memory management */
+#define RT_USING_LWP
+#define LWP_USING_RUNTIME
+#define RT_LWP_MAX_NR 30
+#define LWP_TASK_STACK_SIZE 16384
+#define RT_CH_MSG_MAX_NR 1024
+#define LWP_TID_MAX_NR 64
+#define RT_LWP_SHM_MAX_NR 64
+#define RT_USING_LDSO
+#define LWP_USING_TERMINAL
+#define LWP_PTY_MAX_PARIS_LIMIT 32
+#define RT_USING_VDSO
 
 /* Using USB legacy version */
 
 /* end of Using USB legacy version */
+#define RT_USING_LEGACY_VIRTIO
+#define RT_USING_VIRTIO10
+#define RT_USING_VIRTIO_BLK
+#define RT_USING_VIRTIO_NET
+#define RT_USING_VIRTIO_CONSOLE
+#define RT_USING_VIRTIO_CONSOLE_PORT_MAX_NR 4
+#define RT_USING_VIRTIO_GPU
+#define RT_USING_VIRTIO_INPUT
 /* end of RT-Thread Components */
 
 /* RT-Thread Utestcases */
@@ -468,6 +509,10 @@
 /* FT32 HAL & SDK Drivers */
 
 /* end of FT32 HAL & SDK Drivers */
+
+/* NOVOSNS Drivers */
+
+/* end of NOVOSNS Drivers */
 /* end of HAL & SDK Drivers */
 
 /* sensors drivers */
@@ -550,14 +595,6 @@
 
 /* RISC-V QEMU virt64 configs */
 
-#define RT_USING_LEGACY_VIRTIO
-#define RT_USING_VIRTIO10
-#define RT_USING_VIRTIO_BLK
-#define RT_USING_VIRTIO_NET
-#define RT_USING_VIRTIO_CONSOLE
-#define RT_USING_VIRTIO_CONSOLE_PORT_MAX_NR 4
-#define RT_USING_VIRTIO_GPU
-#define RT_USING_VIRTIO_INPUT
 #define BSP_USING_VIRTIO_BLK
 #define BSP_USING_VIRTIO_NET
 #define BSP_USING_VIRTIO_CONSOLE

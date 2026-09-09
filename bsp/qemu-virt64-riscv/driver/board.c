@@ -26,6 +26,7 @@
 
 #ifdef RT_USING_SMP
 #include "interrupt.h"
+#include <smp_call.h>
 #endif /* RT_USING_SMP */
 
 #ifdef RT_USING_SMART
@@ -101,6 +102,10 @@ void rt_hw_board_init(void)
 #ifdef RT_USING_SMP
     /* ipi init */
     rt_hw_ipi_init();
+    rt_smp_call_init();
+    rt_hw_ipi_handler_install(RT_SCHEDULE_IPI, rt_scheduler_ipi_handler);
+    rt_hw_ipi_handler_install(RT_STOP_IPI, rt_scheduler_ipi_handler);
+    rt_hw_ipi_handler_install(RT_SMP_CALL_IPI, rt_smp_call_ipi_handler);
 #endif /* RT_USING_SMP */
 
 #ifdef RT_USING_COMPONENTS_INIT
