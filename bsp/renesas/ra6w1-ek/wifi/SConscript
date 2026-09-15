@@ -1,0 +1,85 @@
+import os
+
+from building import *
+
+Import('RTT_ROOT')
+Import('rtconfig')
+
+cwd = GetCurrentDir()
+bsp_root = os.path.dirname(cwd)
+
+def path(*parts):
+    return os.path.join(cwd, *parts)
+
+def collect_c(root):
+    sources = []
+    for current, dirs, files in os.walk(root):
+        dirs.sort()
+        for name in sorted(files):
+            if name.endswith('.c'):
+                source = os.path.join(current, name)
+                sources.append(os.path.relpath(source, cwd))
+    return sources
+
+def collect_dirs(root):
+    result = []
+    if not os.path.isdir(root):
+        return result
+    for current, dirs, files in os.walk(root):
+        dirs.sort()
+        result.append(current)
+    return result
+
+src = []
+src += collect_c(path('crypto', 'mbedtls', 'library'))
+src += collect_c(path('platform', 'rm_mbedtls'))
+src += collect_c(path('platform', 'rm_psa_crypto_w'))
+src += collect_c(path('platform', 'rm_wifi'))
+src += collect_c(path('platform', 'r_cc312_openable_w'))
+src += collect_c(path('sdk'))
+src += collect_c(path('port'))
+src += collect_c(path('apps'))
+src += Glob('platform/rom/*.S')
+
+CPPPATH = [
+    path('config'),
+    path('include'),
+    path('port'),
+    path('platform'),
+    path('platform', 'fsp_inc'),
+    path('platform', 'fsp_inc', 'api'),
+    path('platform', 'fsp_inc', 'instances'),
+    path('crypto', 'mbedtls'),
+    path('crypto', 'mbedtls', 'include'),
+    path('crypto', 'mbedtls', 'include', 'mbedtls'),
+    path('crypto', 'mbedtls', 'include', 'psa'),
+    path('crypto', 'mbedtls', 'library'),
+    path('sdk'),
+    path('sdk', 'include'),
+    path('sdk', 'include', 'supplicant', 'src'),
+    path('sdk', 'include', 'supplicant', 'wpa_supplicant'),
+    path('sdk', 'include', 'system', 'common'),
+]
+
+for root in (path('platform'), path('sdk'), path('crypto')):
+    CPPPATH += collect_dirs(root)
+CPPPATH = sorted(set(CPPPATH))
+
+CPPDEFINES = [
+    'OS_FREERTOS',
+]
+
+group = DefineGroup(
+    'WiFiDriver',
+    src,
+    depend=[''],
+    CPPPATH=CPPPATH,
+    LOCAL_CPPDEFINES=CPPDEFINES,
+    LOCAL_CCFLAGS=' -Os',
+    LIBPATH=[path('libs')],
+    LIBS=['macsw', 'rwnx_drv', 'romaclib', 'supplicant',
+          'r_cc312_property_w'],
+    LINKFLAGS=' -Wl,-u,machw_mib',
+)
+
+Return('group')
