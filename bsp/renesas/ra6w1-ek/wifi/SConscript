@@ -65,8 +65,13 @@ for root in (path('platform'), path('sdk'), path('crypto')):
     CPPPATH += collect_dirs(root)
 CPPPATH = sorted(set(CPPPATH))
 
+
 CPPDEFINES = [
-    'OS_FREERTOS',
+    ('RT_LWIP_NETIF_TX_SINGLE_PBUF', 1),
+    # pbuf payload 前预留 Wi-Fi TX 描述符及硬件发送描述符空间（104+220+68+64） 数据来源SDK freertos lwipopts.h。
+    ('RT_LWIP_PBUF_LINK_ENCAPSULATION_HLEN', 456),
+    # pbuf payload 后预留 Wi-Fi 驱动发送完成处理所需的尾部空间 数据来源SDK freertos lwipopts.h。
+    ('RT_LWIP_PBUF_PAYLOAD_MARGIN_LEN', 36),
 ]
 
 group = DefineGroup(
@@ -74,7 +79,7 @@ group = DefineGroup(
     src,
     depend=[''],
     CPPPATH=CPPPATH,
-    LOCAL_CPPDEFINES=CPPDEFINES,
+    CPPDEFINES=CPPDEFINES,
     LOCAL_CCFLAGS=' -Os',
     LIBPATH=[path('libs')],
     LIBS=['macsw', 'rwnx_drv', 'romaclib', 'supplicant',
