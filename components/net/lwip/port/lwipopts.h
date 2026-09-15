@@ -334,6 +334,22 @@
 // #define MEMP_NUM_TCPIP_MSG_INPKT    16
 
 /* ---------- Pbuf options ---------- */
+
+/* Optional driver-reserved space before and after a PBUF_RAM payload. */
+#ifdef RT_LWIP_PBUF_LINK_ENCAPSULATION_HLEN
+#define PBUF_LINK_ENCAPSULATION_HLEN RT_LWIP_PBUF_LINK_ENCAPSULATION_HLEN
+#endif
+
+#ifdef RT_LWIP_PBUF_PAYLOAD_MARGIN_LEN
+#define PBUF_PAYLOAD_MARGIN_LEN      RT_LWIP_PBUF_PAYLOAD_MARGIN_LEN
+#else
+#define PBUF_PAYLOAD_MARGIN_LEN      0
+#endif
+
+#ifdef RT_LWIP_NETIF_TX_SINGLE_PBUF
+#define LWIP_NETIF_TX_SINGLE_PBUF    1
+#endif
+
 /* PBUF_POOL_SIZE: the number of buffers in the pbuf pool. */
 #ifdef RT_LWIP_PBUF_NUM
 #define PBUF_POOL_SIZE               RT_LWIP_PBUF_NUM
