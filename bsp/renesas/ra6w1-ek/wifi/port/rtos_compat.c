@@ -3,8 +3,13 @@
 #include <stdint.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <string.h>
 
 #include <rtthread.h>
+
+#define DBG_TAG "wifi.os"
+#define DBG_LVL DBG_INFO
+#include <rtdbg.h>
 
 #include "bsp_clocks.h"
 #include "sys_clock_mgr.h"
@@ -78,8 +83,45 @@ BaseType_t xTimerGenericCommandFromTask(TimerHandle_t timer,
                                         BaseType_t * higher_priority_task_woken,
                                         TickType_t ticks_to_wait)
 {
-    return xTimerGenericCommand(timer, command, optional_value,
-                                higher_priority_task_woken, ticks_to_wait);
+    rt_timer_t native = (rt_timer_t)timer;
+    rt_err_t result = -RT_EINVAL;
+    rt_tick_t period = optional_value;
+    (void)ticks_to_wait;
+    if (higher_priority_task_woken)
+        *higher_priority_task_woken = pdFALSE;
+    if (!native)
+        return pdFAIL;
+    /* The wrapper's public timer ABI begins with struct rt_timer. */
+    switch (command)
+    {
+    case tmrCOMMAND_START:
+    case tmrCOMMAND_START_FROM_ISR:
+    case tmrCOMMAND_RESET:
+    case tmrCOMMAND_RESET_FROM_ISR:
+        result = rt_timer_start(native);
+        break;
+    case tmrCOMMAND_STOP:
+    case tmrCOMMAND_STOP_FROM_ISR:
+        result = rt_timer_stop(native);
+        break;
+    case tmrCOMMAND_CHANGE_PERIOD:
+    case tmrCOMMAND_CHANGE_PERIOD_FROM_ISR:
+        if (period)
+        {
+            rt_timer_stop(native);
+            result = rt_timer_control(native, RT_TIMER_CTRL_SET_TIME, &period);
+            if (result == RT_EOK)
+                result = rt_timer_start(native);
+        }
+        break;
+    case tmrCOMMAND_DELETE:
+        result = rt_object_is_systemobject(&native->parent) ?
+                 rt_timer_detach(native) : rt_timer_delete(native);
+        break;
+    default:
+        break;
+    }
+    return result == RT_EOK ? pdPASS : pdFAIL;
 }
 
 /* Preserve the ABI used by the original Cortex-M FreeRTOS port. */
@@ -107,7 +149,14 @@ int SEGGER_RTT_vprintf(unsigned buffer_index, const char * format, va_list * arg
     length = vsnprintf(buffer, sizeof(buffer), format, *arguments);
     if (length > 0)
     {
-        rt_kprintf("%s", buffer);
+        size_t used = strlen(buffer);
+
+        while ((used > 0U) &&
+               ((buffer[used - 1U] == '\n') || (buffer[used - 1U] == '\r')))
+        {
+            buffer[--used] = '\0';
+        }
+        LOG_I("%s", buffer);
     }
 
     return length;

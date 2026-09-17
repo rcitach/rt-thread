@@ -2,6 +2,10 @@
 
 #include <rtthread.h>
 
+#define DBG_TAG "wifi.hw"
+#define DBG_LVL DBG_INFO
+#include <rtdbg.h>
+
 #include "bsp_api.h"
 #include "bsp_clocks.h"
 #include "hal_data.h"
@@ -26,7 +30,7 @@ static void wifi_hw_freeze_system_watchdog(void)
      */
     CRG_TOP->SET_FREEZE_REG_b.FRZ_SYS_WDOG = 1;
 
-    rt_kprintf("[wifi-hw] SYS_WDOG frozen: ctrl=0x%08x count=0x%08x\n",
+    LOG_I("SYS_WDOG frozen: ctrl=0x%08x count=0x%08x",
                (unsigned int) SYS_WDOG->WATCHDOG_CTRL_REG,
                (unsigned int) SYS_WDOG->WATCHDOG_REG);
 }
@@ -35,7 +39,7 @@ static void wifi_hw_print_reset_status(void)
 {
     uint32_t reset_status = g_bsp_reset_stat_reg;
 
-    rt_kprintf("[wifi-hw] reset status=0x%08x POR=%u HW=%u SW=%u SWD=%u M33_WDOG=%u\n",
+    LOG_I("reset status=0x%08x POR=%u HW=%u SW=%u SWD=%u M33_WDOG=%u",
                (unsigned int) reset_status,
                (unsigned int) ((reset_status >> 0) & 1U),
                (unsigned int) ((reset_status >> 1) & 1U),
@@ -128,16 +132,16 @@ static void wifi_hw_print_clock_state(const char *tag)
     pll_ctrl = CRG_COM->PLL1_ARM_CTRL_REG;
     xtal_ctrl = CRG_COM->XTAL40M_CTRL_REG;
 
-    rt_kprintf("[wifi-hw] %s: CLK_AMBA=0x%08x CLK_CTRL=0x%08x "
-               "PLL_CTRL=0x%08x XTAL_CTRL=0x%08x SYS_STATUS=0x%08x\n",
+    LOG_I("%s: CLK_AMBA=0x%08x CLK_CTRL=0x%08x "
+               "PLL_CTRL=0x%08x XTAL_CTRL=0x%08x SYS_STATUS=0x%08x",
                tag,
                (unsigned int) CRG_TOP->CLK_AMBA_REG,
                (unsigned int) clk_ctrl,
                (unsigned int) pll_ctrl,
                (unsigned int) xtal_ctrl,
                (unsigned int) CRG_TOP->SYS_STATUS_REG);
-    rt_kprintf("[wifi-hw] %s: SYS_SEL=%u PLL_SEL=%u PLL_EN=%u PLL_LOCK=%u "
-               "XTAL_EN=%u XTAL_RDY=%u XTAL_DPLL_EN=%u RUN_XTAL=%u RUN_PLL=%u\n",
+    LOG_I("%s: SYS_SEL=%u PLL_SEL=%u PLL_EN=%u PLL_LOCK=%u "
+               "XTAL_EN=%u XTAL_RDY=%u XTAL_DPLL_EN=%u RUN_XTAL=%u RUN_PLL=%u",
                tag,
                (unsigned int) (clk_ctrl & 0x3U),
                (unsigned int) ((clk_ctrl >> 2) & 0x7U),
@@ -174,11 +178,11 @@ static int wifi_hw_restore_console_baud(void)
     fsp_status = g_uart0.p_api->baudSet(g_uart0.p_ctrl, &baud_setting);
     if (FSP_SUCCESS != fsp_status)
     {
-        rt_kprintf("[wifi-hw] UART baud update failed: %d\n", fsp_status);
+        LOG_E("UART baud update failed: %d", fsp_status);
         return -RT_ERROR;
     }
 
-    rt_kprintf("[wifi-hw] UART baud restored: clock=%u int=%u frac=%u\n",
+    LOG_I("UART baud restored: clock=%u int=%u frac=%u",
                (unsigned int) WIFI_HW_UART_CLOCK_HZ,
                (unsigned int) baud_setting.int_baud,
                (unsigned int) baud_setting.fra_baud);
@@ -198,7 +202,7 @@ static int wifi_hw_refresh_runtime_timing(void)
     systick_reload = SystemCoreClock / RT_TICK_PER_SECOND;
     if ((systick_reload == 0U) || (systick_reload > SysTick_LOAD_RELOAD_Msk))
     {
-        rt_kprintf("[wifi-hw] invalid SysTick reload: %u\n",
+        LOG_E("invalid SysTick reload: %u",
                    (unsigned int) systick_reload);
         return -RT_EINVAL;
     }
@@ -211,12 +215,12 @@ static int wifi_hw_refresh_runtime_timing(void)
     /* Do this after UART is repaired, because diagnostics use uart0. */
     if (SysTick_Config(systick_reload) != 0U)
     {
-        rt_kprintf("[wifi-hw] SysTick configuration failed\n");
+        LOG_E("SysTick configuration failed");
         return -RT_ERROR;
     }
     NVIC_SetPriority(SysTick_IRQn, 0xFF);
 
-    rt_kprintf("[wifi-hw] runtime timing refreshed: core=%u uart=115200 tick=%u Hz\n",
+    LOG_I("runtime timing refreshed: core=%u uart=115200 tick=%u Hz",
                (unsigned int) SystemCoreClock,
                (unsigned int) RT_TICK_PER_SECOND);
     return RT_EOK;
@@ -228,7 +232,7 @@ int wifi_hw_platform_prepare(void)
     uint32_t pll_result;
     int status;
 
-    rt_kprintf("[wifi-hw] prepare clocks and Wi-Fi platform\n");
+    LOG_I("prepare clocks and Wi-Fi platform");
     wifi_hw_print_reset_status();
     wifi_hw_freeze_system_watchdog();
     wifi_hw_print_clock_state("before prepare");
@@ -243,12 +247,12 @@ int wifi_hw_platform_prepare(void)
     /* Keep the middleware-visible clock state consistent with the hardware. */
     cm_sys_clk_init(sysclk_PLL480);
 
-    rt_kprintf("[wifi-hw] enable XTAL40M\n");
+    LOG_I("enable XTAL40M");
     bsp_clock_xtalm_enable(true);
     status = wifi_hw_wait_xtal_ready();
     if (status != RT_EOK)
     {
-        rt_kprintf("[wifi-hw] XTAL40M is not ready\n");
+        LOG_E("XTAL40M is not ready");
         wifi_hw_print_clock_state("XTAL timeout");
         return status;
     }
@@ -263,22 +267,22 @@ int wifi_hw_platform_prepare(void)
         status = wifi_hw_select_xtal_safe();
         if (status != RT_EOK)
         {
-            rt_kprintf("[wifi-hw] cannot select XTAL40M before PLL startup\n");
+            LOG_E("cannot select XTAL40M before PLL startup");
             wifi_hw_print_clock_state("XTAL select timeout");
             return status;
         }
 
         wifi_hw_print_clock_state("before PLL startup");
-        rt_kprintf("[wifi-hw] start PLL480\n");
+        LOG_I("start PLL480");
         pll_result = hw_clk_pll_sys_on();
-        rt_kprintf("[wifi-hw] PLL startup returned 0x%08x\n",
+        LOG_I("PLL startup returned 0x%08x",
                    (unsigned int) pll_result);
         wifi_hw_print_clock_state("after PLL startup");
 
         status = wifi_hw_wait_pll_lock();
         if (status != RT_EOK)
         {
-            rt_kprintf("[wifi-hw] PLL did not lock\n");
+            LOG_E("PLL did not lock");
             wifi_hw_print_clock_state("PLL timeout");
             return status;
         }
@@ -296,7 +300,7 @@ int wifi_hw_platform_prepare(void)
     status = wifi_hw_wait_pll_selected();
     if (status != RT_EOK)
     {
-        rt_kprintf("[wifi-hw] CPU clock did not switch to PLL\n");
+        LOG_E("CPU clock did not switch to PLL");
         wifi_hw_print_clock_state("clock switch timeout");
         return status;
     }
@@ -309,11 +313,11 @@ int wifi_hw_platform_prepare(void)
         return status;
     }
 
-    rt_kprintf("[wifi-hw] CPU clock set to 160 MHz\n");
-    rt_kprintf("wifi_hw_refresh_runtime_timing returned %d\n", status);
+    LOG_I("CPU clock set to 160 MHz");
+    LOG_I("wifi_hw_refresh_runtime_timing returned %d", status);
     wifi_hw_print_clock_state("after prepare");
-    rt_kprintf("[wifi-hw] SystemCoreClock=%u\n", (unsigned int) SystemCoreClock);
-    rt_kprintf("[wifi-hw] Wi-Fi memory is owned by RT-Thread lwIP; skip ra6w1_mem_init\n");
+    LOG_I("SystemCoreClock=%u", (unsigned int) SystemCoreClock);
+    LOG_I("Wi-Fi memory is owned by RT-Thread lwIP; skip ra6w1_mem_init");
 
     return RT_EOK;
 }

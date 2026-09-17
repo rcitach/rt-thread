@@ -39,6 +39,9 @@ src += collect_c(path('platform', 'r_cc312_openable_w'))
 src += collect_c(path('sdk'))
 src += collect_c(path('port'))
 src += collect_c(path('apps'))
+# Retain the old implementations for reference; WLAN owns the network now.
+src = [s for s in src if s.replace(os.sep, '/') not in (
+    'port/wifi_lwip_adapter.c', 'apps/wifi_fc80211_demo.c')]
 src += Glob('platform/rom/*.S')
 
 CPPPATH = [
@@ -84,7 +87,13 @@ group = DefineGroup(
     LIBPATH=[path('libs')],
     LIBS=['macsw', 'rwnx_drv', 'romaclib', 'supplicant',
           'r_cc312_property_w'],
-    LINKFLAGS=' -Wl,-u,machw_mib',
+    # WPA archive timeout calls run on the native WLAN event thread.
+    LINKFLAGS=' -Wl,-u,machw_mib' + ''.join(
+        ' -Wl,--wrap=' + name for name in (
+            'eloop_register_timeout', 'eloop_cancel_timeout',
+            'eloop_cancel_timeout_one', 'eloop_is_timeout_registered',
+            'eloop_deplete_timeout', 'eloop_replenish_timeout',
+            'wifi_netif_control')),
 )
 
 Return('group')

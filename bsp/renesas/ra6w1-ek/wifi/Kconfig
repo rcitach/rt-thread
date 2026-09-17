@@ -1,0 +1,68 @@
+menu "Wi-Fi / lwIP throughput tuning"
+
+config RT_LWIP_UDP_RECVMBOX_SIZE
+    int "UDP socket recv mailbox size (DEFAULT_UDP_RECVMBOX_SIZE)"
+    range 1 256
+    default 128
+    help
+        UDP socket 的接收邮箱深度。RT-Thread 的 lwipopts.h 默认为 1，
+        意味着“应用没来得及取走的包全丢”，高速下行时会大量丢包。
+        1472 字节数据报建议 32 以上。
+
+config RT_LWIP_MEMP_NUM_NETBUF
+    int "netbuf pool size (MEMP_NUM_NETBUF)"
+    range 2 512
+    default 128
+    help
+        socket 层每把一个数据报交给应用就要占用一个 netbuf。
+        lwIP 默认只有 2 个，高吞吐下行时会大面积失败并静默丢包。
+
+config RT_LWIP_TCPIP_MSG_INPKT_NUM
+    int "tcpip input message pool (MEMP_NUM_TCPIP_MSG_INPKT)"
+    range 8 256
+    default 128
+    help
+        每个收到的数据包都要占用一个 tcpip_msg 投进 tcpip 线程邮箱。
+        lwIP 默认 16，突发下行时容易耗尽（tcpip_input 直接返回 ERR_MEM）。
+
+config RT_LWIP_TCP_RECVMBOX_SIZE
+    int "TCP socket recv mailbox size (DEFAULT_TCP_RECVMBOX_SIZE)"
+    range 4 256
+    default 128
+    help
+        TCP 接收邮箱深度。高速 TCP 下行时，较小的邮箱会让 tcpip 线程
+        来不及把数据交给 socket 应用，导致窗口收缩和吞吐下降。
+
+config RT_LWIP_MEM_SIZE
+    int "lwIP dynamic heap size in bytes (MEM_SIZE)"
+    range 1600 262144
+    default 65536
+    help
+        pbuf_alloc(PBUF_RAM) 的来源，TCP 发送、ICMP 回包、分片重组都靠它。
+        lwIP 默认只有 1600 字节，连两个 1500 字节的发送 pbuf 都放不下。
+
+config RT_LWIP_PBUF_STRUCT_NUM
+    int "pbuf descriptor pool size (MEMP_NUM_PBUF)"
+    range 16 512
+    default 64
+    help
+        pbuf 描述符池大小。TCP 发送和 Wi-Fi 驱动异步持有 pbuf 时需要额外
+        描述符，池过小会导致发送路径返回 ERR_MEM。
+
+config RT_LWIP_CHECKSUM_ON_COPY
+    bool "calculate checksum while copying socket data"
+    default y
+    help
+        在 socket 数据复制过程中计算校验和，减少发送路径的重复遍历。
+        RA6W1 Wi-Fi 当前使用软件校验和时建议启用。
+
+config RT_LWIP_RECV_BUFSIZE_DEFAULT
+    int "netconn recv buffer limit in bytes (RECV_BUFSIZE_DEFAULT)"
+    range 8192 1048576
+    default 65536
+    help
+        netconn 允许积压的字节数，超出部分在 recv_udp() 里被静默丢弃
+        （不计入任何 lwIP 统计）。lwIP 原版默认 INT_MAX，而 RT-Thread
+        port 压到了 8192，对 1472 字节数据报只能积压 5 个。
+
+endmenu

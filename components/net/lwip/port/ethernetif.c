@@ -471,9 +471,10 @@ static err_t ethernetif_linkoutput(struct netif *netif, struct pbuf *p)
     RT_ASSERT(netif != RT_NULL);
     enetif = (struct eth_device*)netif->state;
 
-    if (enetif->eth_tx(&(enetif->parent), p) != RT_EOK)
+    rt_err_t result = enetif->eth_tx(&(enetif->parent), p);
+    if (result != RT_EOK)
     {
-        return ERR_IF;
+        return (result == -RT_ENOMEM || result == -RT_EBUSY) ? ERR_MEM : ERR_IF;
     }
 #endif
     return ERR_OK;

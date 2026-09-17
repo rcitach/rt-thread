@@ -5,15 +5,11 @@
 
 #include <rtthread.h>
 
-#include "FreeRTOS.h"
-#include "queue.h"
-#include "task.h"
-#include "co_int.h"
+#define DBG_TAG "wifi.sec"
+#define DBG_LVL DBG_INFO
+#include <rtdbg.h>
 
-typedef unsigned long uint32;
-
-#include "os.h"
-#include "rwnx_cfg.h"
+#include "wifi_vendor.h"
 #include "wifi_security_manager.h"
 
 #define WIFI_SECURITY_ETH_HDR_LEN 14U
@@ -48,18 +44,25 @@ static const u8 s_wpa2_psk_rsn_ie[] = {
 static void security_dump_frame(const char *tag, const u8 *data, size_t len)
 {
     size_t index;
+    char line[16U * 3U + 1U];
 
-    rt_kprintf("[wifi-sec] %s (%u bytes):", tag, (unsigned int) len);
-    for (index = 0U; index < len; index++)
+    LOG_I("%s (%u bytes):", tag, (unsigned int) len);
+    for (index = 0U; index < len; index += 16U)
     {
-        if ((index % 16U) == 0U)
-        {
-            rt_kprintf("\n  %03u:", (unsigned int) index);
-        }
+        size_t column;
+        size_t count = len - index;
 
-        rt_kprintf(" %02x", data[index]);
+        if (count > 16U)
+        {
+            count = 16U;
+        }
+        for (column = 0U; column < count; column++)
+        {
+            rt_snprintf(line + column * 3U, sizeof(line) - column * 3U,
+                        " %02x", data[index + column]);
+        }
+        LOG_I("%03u:%s", (unsigned int) index, line);
     }
-    rt_kprintf("\n");
 }
 #endif /* WIFI_SEC_DUMP_EAPOL */
 
@@ -168,7 +171,7 @@ static void security_verify_msg2(const struct wifi_security_manager *manager,
     matches = (memcmp(mic, frame + 81U, 16U) == 0);
     if (!matches)
     {
-        rt_kprintf("[wifi-sec] msg2 MIC verification failed\n");
+        LOG_E("msg2 MIC verification failed");
     }
 }
 
@@ -251,7 +254,7 @@ static int security_set_key(void *ctx, enum wpa_alg alg, const u8 *addr,
     status = wpa_driver_fc80211_set_key(manager->bss, &params);
     if (status < 0)
     {
-        rt_kprintf("[wifi-sec] set_key failed: %d\n", status);
+        LOG_E("set_key failed: %d", status);
     }
     return status;
 }
@@ -298,7 +301,7 @@ static int security_ether_send(void *ctx, const u8 *dest, u16 proto,
      * waiting on, so the frame has to leave as early as possible. */
     if (status < 0)
     {
-        rt_kprintf("[wifi-sec] EAPOL TX failed: %d\n", status);
+        LOG_E("EAPOL TX failed: %d", status);
     }
 
 #if WIFI_SEC_DUMP_EAPOL
@@ -329,7 +332,7 @@ static u8 *security_alloc_eapol(void *ctx, u8 type, const void *data,
     size_t total_len = sizeof(*hdr) + data_len;
 
     (void) ctx;
-    msg = os_malloc(total_len);
+    msg = rt_malloc(total_len);
     if (msg == NULL)
     {
         return NULL;
@@ -446,6 +449,8 @@ int wifi_security_manager_init(struct wifi_security_manager *manager,
     }
 
     wifi_security_manager_deinit(manager);
+    s_last_anonce_valid = false;
+    memset(s_last_anonce, 0, sizeof(s_last_anonce));
     memset(manager, 0, sizeof(*manager));
     manager->bss = config->bss;
     manager->user_ctx = config->user_ctx;
@@ -465,7 +470,7 @@ int wifi_security_manager_init(struct wifi_security_manager *manager,
     memcpy(manager->ifname, config->ifname, name_len);
     manager->ifname[name_len] = '\0';
 
-    manager->sm_ctx = os_zalloc(sizeof(*manager->sm_ctx));
+    manager->sm_ctx = rt_calloc(1, sizeof(*manager->sm_ctx));
     if (manager->sm_ctx == NULL)
     {
         return -RT_ENOMEM;
@@ -550,11 +555,13 @@ void wifi_security_manager_deinit(struct wifi_security_manager *manager)
     {
         /* This is only reached when wpa_sm_init() failed before taking
          * ownership of the context. */
-        os_free(manager->sm_ctx);
+        rt_free(manager->sm_ctx);
         manager->sm_ctx = NULL;
     }
     memset(manager, 0, sizeof(*manager));
     manager->state = WPA_DISCONNECTED;
+    s_last_anonce_valid = false;
+    memset(s_last_anonce, 0, sizeof(s_last_anonce));
 }
 
 int wifi_security_manager_notify_assoc(struct wifi_security_manager *manager,
@@ -588,6 +595,8 @@ void wifi_security_manager_notify_disassoc(
         manager->state = WPA_DISCONNECTED;
         manager->key_done = false;
     }
+    s_last_anonce_valid = false;
+    memset(s_last_anonce, 0, sizeof(s_last_anonce));
 }
 
 int wifi_security_manager_rx_eapol(struct wifi_security_manager *manager,

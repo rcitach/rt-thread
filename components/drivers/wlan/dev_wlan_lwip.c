@@ -167,10 +167,15 @@ static void netif_set_connected(void *parameter)
     {
         if (wlan->mode == RT_WLAN_STATION)
         {
+            err_t dhcp_result = ERR_OK;
             LOG_D("F:%s L:%d dhcp start run", __FUNCTION__, __LINE__);
             netifapi_netif_common(eth_dev->netif, netif_set_link_up, NULL);
 #ifdef RT_LWIP_DHCP
-            netifapi_dhcp_start(eth_dev->netif);
+            dhcp_result = netifapi_dhcp_start(eth_dev->netif);
+            LOG_I("DHCP start netif=%c%c up=%d link=%d result=%d",
+                  eth_dev->netif->name[0], eth_dev->netif->name[1],
+                  netif_is_up(eth_dev->netif),
+                  netif_is_link_up(eth_dev->netif), dhcp_result);
 #endif
             rt_timer_start(&lwip_prot->timer);
         }
@@ -370,8 +375,7 @@ static rt_err_t rt_wlan_lwip_protocol_send(rt_device_t device, struct pbuf *p)
 
 #ifdef RT_WLAN_PROT_LWIP_PBUF_FORCE
     {
-        rt_wlan_prot_transfer_dev(wlan, p, p->tot_len);
-        return RT_EOK;
+        return rt_wlan_prot_transfer_dev(wlan, p, p->tot_len);
     }
 #else
     {

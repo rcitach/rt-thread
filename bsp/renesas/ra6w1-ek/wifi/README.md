@@ -1,60 +1,119 @@
-# Wi-Fi backup demo
+# RA6W1 Wi-Fi port
 
-`apps/wifi_fc80211_demo.c` is the standalone cfg80211 demo used by the
-RA6W1-EK BSP. It is selected by the BSP's top-level `SConscript` and is linked
-with the archives in `libs/`. The old `../wifi/SConscript` is retained only
-for legacy callers.
+The BSP uses `port/wifi_rt_wlan_adapter.c` as an independent RT-Thread WLAN
+station/SoftAP driver. The `wlan0` station and `wlan1` AP modes are bound during application startup;
+hardware and firmware initialization then runs in a separate RT-Thread worker,
+so a slow firmware boot cannot leave the management layer in `RT_WLAN_NONE`. It does not call `apps/wifi_fc80211_demo.c` or maintain a private
+lwIP netif. The standard WLAN device, management and lwIP protocol components
+own the interface, link state and DHCP.
 
-## Ownership
+## Source ownership
 
-This directory is the active Wi-Fi source tree for this BSP. The Wi-Fi build
-script, application, port layer, configuration, SDK adapters, crypto adapters
-and vendor archives are all kept below `wifi_back/`.
-The default top-level BSP build skips the old `wifi/` directory; its
-`SConscript` is retained only for legacy direct callers and is not an active
-source or include root.
+- `port/wifi_rt_wlan_adapter.c`: station/AP initialization, asynchronous
+  scan/join, association, SoftAP beacon setup, power saving, and pbuf transport.
+- `port/wifi_security_manager.c`: host WPA2-PSK/CCMP key exchange and key installation.
+- `port/wifi_wpa_timers.c`: native RT-Thread timer scheduling for the WPA archive.
+  The linker redirects its six `eloop_*timeout*` APIs to this implementation.
+- `port/wifi_vendor_abi.c`: the event-queue ABI and legacy symbols required by
+  the vendor archives. The SDK's legacy `wifi_netif_control` is intercepted so
+  it cannot independently alter the WLAN framework's netif.
+- `port/rtos_compat.c`: exported ABI symbols for the closed archives, implemented
+  using RT-Thread services.
+- `port/wifi_crypto_port.c`: CryptoCell/Mbed TLS callbacks and native mutexes.
+- `port/wifi_hw_prepare.c`: board clock and Wi-Fi hardware preparation.
+- `apps/wifi_net_speed_test.c`: socket throughput test using the active WLAN.
+- `crypto/`, `platform/`, `sdk/`, `config/`, `libs/`: vendor sources, configuration,
+  headers and prebuilt archives.
 
-- `include/`: local public headers for the hardware preparation and crypto
-  port layers.
-- `platform/`: clock preparation, ROM veneers, RTOS compatibility,
-  FSP adapters, lwIP/DHCP glue and the Wi-Fi platform glue.
-- `sdk/`: `rwnx_cfg.h`, cfg80211 ABI structures, PTIM headers,
-  FreeRTOS/driver headers and the supplicant compatibility headers.
-- `crypto/` and `platform/r_cc312_openable_w/`: Mbed TLS and
-  CryptoCell objects used for WPA2 PSK derivation.
-- `config/`, `os/` and the RT-Thread lwIP component: configuration,
-  allocator, timing and network stack support.
-- `port/wifi_crypto_port.c`: CryptoCell callback bridge used by the
-  password-form connection command.
+The previously removed crypto implementation files have been restored. Their
+existing configuration guards and linker section collection determine what
+enters the image. `port/wifi_lwip_adapter.c` is also restored, but explicitly
+excluded from compilation together with `apps/wifi_fc80211_demo.c`.
 
-The five files under `libs/` are the vendor archive inputs for this backup
-demo: `libmacsw.a`, `librwnx_drv.a`, `libromaclib.a`, `libsupplicant.a` and
-`libr_cc312_property_w.a`.
+New port code uses RT-Thread queues, mutexes, threads, timers and allocators.
+The prebuilt MAC/driver/supplicant archives still call the FreeRTOS ABI, so the
+FreeRTOS_Wrapper package remains a binary dependency. `StaticQueue_t` supplies
+only its public handle layout; the event queue itself is a native `rt_mq` and
+the worker consumes it with `rt_mq_recv`. This is not a claim that the closed
+archives have been rebuilt for native RT-Thread.
 
-## Build
+Port diagnostics use `LOG_E`, `LOG_W` and `LOG_I`, with tags such as `wifi.wlan`,
+`wifi.sec`, `wifi.crypto`, `wifi.hw` and `wifi.os`.
 
-Run from the BSP directory:
+## Data path and lifetime
+
+`RT_WLAN_PROT_LWIP_ENABLE` and `RT_WLAN_PROT_LWIP_PBUF_FORCE` enable the WLAN
+framework's existing pbuf adapter. RX transfers the driver's pbuf reference
+straight to that protocol; a rejected packet is freed by the driver adapter.
+The vendor RX ABI uses `VIF + 2`; it is normalized before WLAN delivery.
+TX shares a contiguous, exclusively owned `PBUF_RAM` by adding one reference
+for the firmware. Chained, custom, shared or insufficient-headroom buffers are
+copied into a suitable TX pbuf. A failed queue operation releases only the
+reference acquired for that operation. The caller's reference remains valid.
+
+The archive expects a 16-byte pbuf, with its interface index at byte 15 and TX
+descriptors immediately after the structure. Compile-time checks enforce this
+ABI, 456 bytes of headroom and 36 bytes of tailroom. `LWIP_NETIF_TX_SINGLE_PBUF`
+is retained to reduce normal TCP chaining; it alone does not make arbitrary
+pbufs safe for this firmware.
+
+`LWIP_NO_TX_THREAD` removes an extra synchronous mailbox hop. The WLAN pbuf
+adapter propagates driver failures, and the direct Ethernet output path maps
+resource exhaustion to lwIP `ERR_MEM`, so socket retry logic can see it.
+
+One blocking event worker serializes driver events and EAPOL handling. Native
+timer callbacks only wake this worker; WPA callbacks execute under the same
+control mutex as join/disconnect. WLAN notifications run outside that mutex
+to avoid lock inversion with management callbacks. Scan snapshots are bounded
+to 64 entries and replaced on each scan. The firmware BSS cache remains valid
+for association and is released before the next scan or when disabling WLAN. Keys and WPA contexts are released
+on disconnection. After an irreversible vendor-task startup failure, live
+queue/thread resources are retained and initialization is not repeated; the
+vendor API provides no safe task shutdown operation. Reboot after such a
+failure. A timed-out scan is not reused until its abort completion arrives.
+
+The station and SoftAP paths support open networks and WPA2-PSK with CCMP.
+Station passphrases of 8–63 characters and 64 hexadecimal PSKs are accepted;
+SoftAP passwords must be 8–63 characters. WPA3, enterprise authentication,
+mandatory PMF and passive-only scans are not implemented. Unsupported
+authentication is rejected, rather than reported as an open network. The
+country table uses the BSP's `COUNTRY_CODE_DEFAULT`; power saving defaults to
+off. The AP uses the second hardware VIF (`wlan1`) and a 2.4 GHz 20 MHz
+channel. Configure a static AP address or enable RT-Thread's DHCP server for
+clients that need automatic IPv4 configuration.
+
+## Build and run
+
+From the BSP directory:
 
 ```sh
-RTT_EXEC_PATH=/home/rain/.tools/toolchain/arm-gnu-14.3.rel1-none-eabi/bin \
-scons -j4
+RTT_EXEC_PATH=/home/rain/.tools/toolchain/arm-gnu-14.3.rel1-none-eabi/bin scons -j4
 ```
 
-The build must produce `rtthread.elf` and include symbols from
-`wifi_back/apps/wifi_fc80211_demo.c` and `wifi_back/libs/librwnx_drv.a`.
-
-## Run
-
-After flashing the image:
+After flashing, use the standard WLAN commands. The station is registered and
+attached to the WLAN lwIP protocol at startup:
 
 ```text
-msh /> wifi_low_init
-msh /> wifi_low_scan
-msh /> wifi_low_connect xiaomi 12345678 2437 02:5C:AD:40:32:C7
-msh /> wifi_low_status
-msh /> wifi_low_disconnect
+msh /> wifi scan
+msh /> wifi join xiaomi <password>
+msh /> wifi ap ra6w1-ap <password>
+msh /> wifi status
+msh /> ifconfig
+msh /> ifconfig w1 192.168.10.1 255.255.255.0
+msh /> ping 10.252.47.144
+msh /> wifi_speed_test udp_tx 10.252.47.144 5002 10
+msh /> wifi_speed_test udp_rx 10.252.47.144 5002 10
+msh /> wifi disc
+msh /> wifi ap_stop
 ```
 
-The connection command calls `rwnx_cfg80211_connect()` directly. A successful
-`FC80211_CMD_CONNECT` event confirms the low-level association path. The demo
-does not start the complete WPA Supplicant state machine or DHCP workflow.
+Wait for the `wifi.wlan` ready message and the WLAN `Got IP address` message before socket tests. Old `wifi_low_*`
+and `wifi_wlan_test` commands are no longer built. Applications can use
+`rt_wlan_connect`, `rt_wlan_disconnect`, WLAN event handlers and
+`rt_wlan_dev_set_powersave` directly.
+
+The speed command reports `rx_drv` received/dropped frames and `tx_wlan`
+accepted frames, queue/event rejections, fallback copies and minimum free TX
+slots. TX acceptance is not an over-the-air delivery measurement. Compare it
+with the remote receiver's throughput/loss statistics. Real association,
+DHCP, disconnect/reconnect and throughput still require board validation.

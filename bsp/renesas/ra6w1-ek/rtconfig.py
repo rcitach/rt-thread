@@ -15,7 +15,19 @@ if os.getenv('RTT_ROOT'):
 # EXEC_PATH is the compiler execute path, for example, CodeSourcery, Keil MDK, IAR
 if  CROSS_TOOL == 'gcc':
     PLATFORM    = 'gcc'
-    EXEC_PATH   = r'C:\Users\XXYYZZ'
+    # Use the ARM GNU toolchain installed by the RT-Thread development
+    # environment when it is available.  Keep the old Windows placeholder as
+    # a fallback for existing Windows projects; RTT_EXEC_PATH and
+    # ``scons --exec-path`` still take precedence below.
+    _default_toolchain_path = os.path.expanduser(
+        '~/.tools/toolchain/arm-gnu-14.3.rel1-none-eabi')
+    # RT-Thread expects EXEC_PATH to contain the compiler executables, not the
+    # toolchain installation root.
+    _default_exec_path = os.path.join(_default_toolchain_path, 'bin')
+    if os.path.isfile(os.path.join(_default_exec_path, 'arm-none-eabi-gcc')):
+        EXEC_PATH = _default_exec_path
+    else:
+        EXEC_PATH = r'C:\Users\XXYYZZ'
 
 if os.getenv('RTT_EXEC_PATH'):
     EXEC_PATH = os.getenv('RTT_EXEC_PATH')

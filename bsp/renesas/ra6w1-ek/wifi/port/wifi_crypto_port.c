@@ -6,8 +6,10 @@
 
 #include <rtthread.h>
 
-#include "FreeRTOS.h"
-#include "semphr.h"
+#define DBG_TAG "wifi.crypto"
+#define DBG_LVL DBG_INFO
+#include <rtdbg.h>
+
 
 #include "bsp_otp.h"
 #include "crypto_primitives.h"
@@ -23,8 +25,9 @@ static int s_crypto_engine_ready;
 static void wifi_crypto_retarget_putstring(uint16_t tag, void *srcdata,
                                            uint16_t len)
 {
-    uint16_t index;
     const char *text = (const char *)srcdata;
+    char line[128];
+    size_t used = 0U;
 
     (void)tag;
 
@@ -33,9 +36,29 @@ static void wifi_crypto_retarget_putstring(uint16_t tag, void *srcdata,
         return;
     }
 
-    for (index = 0U; index < len; index++)
+    while (len-- > 0U)
     {
-        rt_kprintf("%c", text[index]);
+        char ch = *text++;
+
+        if (ch == '\r')
+        {
+            continue;
+        }
+        if (ch != '\n')
+        {
+            line[used++] = ch;
+        }
+        if ((ch == '\n') || (used == sizeof(line) - 1U))
+        {
+            line[used] = '\0';
+            LOG_I("%s", line);
+            used = 0U;
+        }
+    }
+    if (used > 0U)
+    {
+        line[used] = '\0';
+        LOG_I("%s", line);
     }
 }
 
@@ -52,7 +75,7 @@ static void wifi_crypto_retarget_printf(uint16_t tag, const char *format,
     }
 
     (void)vsnprintf(buffer, sizeof(buffer), format, args);
-    rt_kprintf("%s", buffer);
+    wifi_crypto_retarget_putstring(tag, buffer, (uint16_t)strlen(buffer));
 }
 
 static void *wifi_crypto_raw_malloc(size_t size)
@@ -175,13 +198,16 @@ static int wifi_crypto_mbedtls_printf(const char *format, ...)
     result = vsnprintf(buffer, sizeof(buffer), format, args);
     va_end(args);
 
-    rt_kprintf("%s", buffer);
+    if (result > 0)
+    {
+        wifi_crypto_retarget_putstring(0U, buffer, (uint16_t)strlen(buffer));
+    }
     return result;
 }
 
 static void wifi_crypto_mbedtls_exit(int status)
 {
-    rt_kprintf("[wifi-demo] mbedTLS exit: %d\n", status);
+    LOG_E("mbedTLS exit: %d", status);
 }
 
 static mbedtls_time_t wifi_crypto_mbedtls_time(mbedtls_time_t *timer)
@@ -201,7 +227,7 @@ static void wifi_crypto_mutex_init(mbedtls_threading_mutex_t *mutex)
 {
     if (mutex != NULL)
     {
-        mutex->mutex = xSemaphoreCreateMutex();
+        mutex->mutex = rt_mutex_create("wcrypt", RT_IPC_FLAG_PRIO);
     }
 }
 
@@ -209,7 +235,7 @@ static void wifi_crypto_mutex_free(mbedtls_threading_mutex_t *mutex)
 {
     if ((mutex != NULL) && (mutex->mutex != NULL))
     {
-        vSemaphoreDelete((SemaphoreHandle_t)mutex->mutex);
+        rt_mutex_delete((rt_mutex_t)mutex->mutex);
         mutex->mutex = NULL;
     }
 }
@@ -221,7 +247,7 @@ static int wifi_crypto_mutex_lock(mbedtls_threading_mutex_t *mutex)
         return MBEDTLS_ERR_THREADING_BAD_INPUT_DATA;
     }
 
-    if (xSemaphoreTake((SemaphoreHandle_t)mutex->mutex, portMAX_DELAY) != pdTRUE)
+    if (rt_mutex_take((rt_mutex_t)mutex->mutex, RT_WAITING_FOREVER) != RT_EOK)
     {
         return MBEDTLS_ERR_THREADING_MUTEX_ERROR;
     }
@@ -236,7 +262,7 @@ static int wifi_crypto_mutex_unlock(mbedtls_threading_mutex_t *mutex)
         return MBEDTLS_ERR_THREADING_BAD_INPUT_DATA;
     }
 
-    if (xSemaphoreGive((SemaphoreHandle_t)mutex->mutex) != pdTRUE)
+    if (rt_mutex_release((rt_mutex_t)mutex->mutex) != RT_EOK)
     {
         return MBEDTLS_ERR_THREADING_MUTEX_ERROR;
     }
@@ -266,7 +292,7 @@ static const CRYPTO_PRIMITIVE_TYPE s_crypto_primitive =
     &wifi_crypto_retarget_tickmeasure
 };
 
-static void wifi_demo_crypto_platform_init(void)
+static void wifi_crypto_platform_init(void)
 {
     if (s_crypto_platform_ready)
     {
@@ -293,7 +319,7 @@ static void wifi_demo_crypto_platform_init(void)
     s_crypto_platform_ready = 1;
 }
 
-int wifi_demo_crypto_init(void)
+int wifi_crypto_init(void)
 {
     uint32_t status;
 
@@ -302,7 +328,7 @@ int wifi_demo_crypto_init(void)
         return 2;
     }
 
-    wifi_demo_crypto_platform_init();
+    wifi_crypto_platform_init();
 
     /* The vendor RM_WIFI path uses this exact flag for the CC312 TRNG setup. */
     status = R_CC312_Crypto_Init(0xffffffffU);
@@ -312,7 +338,7 @@ int wifi_demo_crypto_init(void)
         return (int)status;
     }
 
-    rt_kprintf("[wifi-demo] R_CC312_Crypto_Init failed: %lu\n",
+    LOG_E("R_CC312_Crypto_Init failed: %lu",
                (unsigned long)status);
     return 0;
 }
