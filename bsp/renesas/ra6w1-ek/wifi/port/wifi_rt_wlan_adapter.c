@@ -482,6 +482,16 @@ static int wifi_wlan_test(int argc, char **argv)
     {
         return rt_wlan_dev_init(&s_wifi_wlan, RT_WLAN_STATION);
     }
+
+    /* rt_wlan_dev_register() only registers the device.  The WLAN device
+     * mutex is initialized by _rt_wlan_dev_init(), so every command that
+     * enters rt_device_control() must pass through device initialization. */
+    status = rt_wlan_dev_init(&s_wifi_wlan, RT_WLAN_STATION);
+    if (status != RT_EOK)
+    {
+        return status;
+    }
+
     if (strcmp(argv[1], "scan") == 0)
     {
         return rt_wlan_dev_scan(&s_wifi_wlan, NULL);
@@ -519,7 +529,8 @@ static int wifi_wlan_test(int argc, char **argv)
             sta.channel = (rt_uint16_t) strtoul(
                 argv[sta.security == SECURITY_OPEN ? 3 : 4], NULL, 10);
         }
-        return wifi_wlan_join(&s_wifi_wlan, &sta);
+        return rt_device_control((rt_device_t) &s_wifi_wlan,
+                                 RT_WLAN_CMD_JOIN, &sta);
     }
     if (strcmp(argv[1], "status") == 0)
     {

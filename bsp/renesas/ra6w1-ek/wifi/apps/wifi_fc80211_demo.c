@@ -834,6 +834,48 @@ static void wifi_demo_pump_events(void)
 #endif
 }
 
+#define WIFI_DEMO_EVENT_THREAD_STACK    2048
+#define WIFI_DEMO_EVENT_THREAD_PRIO     (RT_THREAD_PRIORITY_MAX - 10)
+#define WIFI_DEMO_EVENT_THREAD_TICK     10
+#define WIFI_DEMO_EVENT_POLL_MS         5
+
+static rt_thread_t s_wifi_event_thread;
+
+static void wifi_demo_event_thread_entry(void *parameter)
+{
+    (void) parameter;
+
+    for (;;)
+    {
+        wifi_demo_pump_events();
+        rt_thread_mdelay(WIFI_DEMO_EVENT_POLL_MS);
+    }
+}
+
+static int wifi_demo_event_thread_start(void)
+{
+    if (s_wifi_event_thread != RT_NULL)
+    {
+        return RT_EOK;
+    }
+
+    s_wifi_event_thread =
+        rt_thread_create("wifiev", wifi_demo_event_thread_entry, RT_NULL,
+                         WIFI_DEMO_EVENT_THREAD_STACK,
+                         WIFI_DEMO_EVENT_THREAD_PRIO,
+                         WIFI_DEMO_EVENT_THREAD_TICK);
+    if (s_wifi_event_thread == RT_NULL)
+    {
+        rt_kprintf("[wifi-demo] event drain thread create failed\n");
+        return -RT_ENOMEM;
+    }
+
+    rt_thread_startup(s_wifi_event_thread);
+    rt_kprintf("[wifi-demo] event drain thread started\n");
+
+    return RT_EOK;
+}
+
 /* Bring the host and firmware back to a clean station state. A failed WPA
  * exchange can leave EAPOL packets in TO_SUPP_QUEUE and the driver context
  * marked associated; starting another association without clearing both is
@@ -1208,6 +1250,9 @@ static int wifi_demo_start(void)
      * before it queues EAPOL frames.  Set only that transport gate; no
      * wpa_supplicant interface or upper-layer task is started here. */
     supplicant_done();
+    /* Keep draining the driver event queue: fc80211_enable_drv_event() is on
+     * and every posted event owns pvPortMalloc()ed buffers. */
+    (void) wifi_demo_event_thread_start();
     rt_kprintf("[wifi-demo] ready: %s (%u channels)\n",
                WIFI_DEMO_IF_NAME, wifi_demo_count_channels());
     return RT_EOK;
