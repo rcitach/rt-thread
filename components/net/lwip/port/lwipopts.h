@@ -425,6 +425,18 @@
 #define TCP_WND                     (TCP_MSS * 2)
 #endif
 
+/* Advertise a scaled receive window for high-bandwidth TCP links. Keep these
+   options configurable so boards that do not need window scaling retain the
+   lwIP defaults. */
+#ifdef RT_LWIP_WND_SCALE
+#define LWIP_WND_SCALE               1
+#ifdef RT_LWIP_TCP_RCV_SCALE
+#define TCP_RCV_SCALE                RT_LWIP_TCP_RCV_SCALE
+#else
+#define TCP_RCV_SCALE                0
+#endif
+#endif
+
 /* Maximum number of retransmissions of data segments. */
 #define TCP_MAXRTX                  12
 
@@ -454,6 +466,10 @@
 #define ARP_QUEUEING                1
 
 /* ---------- Checksum options ---------- */
+#ifdef RT_LWIP_CHECKSUM_ON_COPY
+#define LWIP_CHECKSUM_ON_COPY           1
+#endif
+
 #ifdef RT_LWIP_USING_HW_CHECKSUM
 #define CHECKSUM_GEN_IP                 0
 #define CHECKSUM_GEN_UDP                0
@@ -674,7 +690,9 @@
 /**
  * If LWIP_SO_RCVBUF is used, this is the default value for recv_bufsize.
  */
-#ifndef RECV_BUFSIZE_DEFAULT
+#ifdef RT_LWIP_RECV_BUFSIZE_DEFAULT
+#define RECV_BUFSIZE_DEFAULT        RT_LWIP_RECV_BUFSIZE_DEFAULT
+#else
 #define RECV_BUFSIZE_DEFAULT            8192
 #endif
 

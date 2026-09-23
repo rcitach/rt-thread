@@ -20,8 +20,9 @@ if  CROSS_TOOL == 'gcc':
 if os.getenv('RTT_EXEC_PATH'):
     EXEC_PATH = os.getenv('RTT_EXEC_PATH')
 
-BUILD = 'debug' 
-# BUILD = 'release' 
+# Match the vendor SDK throughput build by default. Set RTT_BUILD=debug for
+# source-level debugging when needed.
+BUILD = os.getenv('RTT_BUILD', 'release')
 
 if PLATFORM == 'gcc':
     # toolchains
@@ -49,7 +50,7 @@ if PLATFORM == 'gcc':
         CFLAGS += ' -O0 -gdwarf-2 -g -Wall'
         AFLAGS += ' -gdwarf-2'
     else:
-        CFLAGS += ' -Os'
+        CFLAGS += ' -O2'
 
     POST_ACTION = OBJCPY + ' -O ihex $TARGET rtthread.hex\n' + SIZE + ' $TARGET \n'
     POST_ACTION += OBJCPY + ' -O binary $TARGET rtthread.bin\n' + SIZE + ' $TARGET \n'
