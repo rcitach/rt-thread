@@ -10,12 +10,12 @@
 #include <lwip/etharp.h>
 #include <lwip/tcpip.h>
 
-#define SPEED_BUF_MAX           1472U   /* 单包最大载荷（避免 IP 分片） */
-#define SPEED_DEFAULT_PAYLOAD   1472U
+#define SPEED_UDP_BUF_MAX       1472U   /* UDP datagram limit for MTU 1500. */
+#define SPEED_TCP_BUF_MAX       (8U * TCP_MSS)
+#define SPEED_TCP_DEFAULT       (4U * TCP_MSS)
 #define SPEED_IO_TIMEOUT_MS     200U    /* send/recv 超时，避免整体卡死 */
-#define SPEED_PROBE_DELAY_MS    50U     /* udp_rx 探针后等服务器就绪 */
 #define SPEED_MAX_RETRY         100000U /* 连续重试上限（TX 队列长期拥塞时退出） */
-#define SPEED_THREAD_PRIORITY   16U     /* 低于 WLAN/以太网线程，避免阻塞驱动回收 */
+#define SPEED_THREAD_PRIORITY   16U     /* Below tcpip (10), MAC (9), and driver (10). */
 #define SPEED_THREAD_STACK_SIZE 4096U
 #define SPEED_THREAD_TIMESLICE  5U
 #define SPEED_MODE_TEXT_MAX     16U
@@ -61,7 +61,8 @@ struct speed_job
     int quiet;
     int result;
     struct rt_semaphore done;
-    char buffer[SPEED_BUF_MAX];
+    /* Allocate only the selected I/O size; TCP writes are segmented by lwIP. */
+    char buffer[];
 };
 
 static struct rt_mutex s_speed_lock;
@@ -373,8 +374,10 @@ static void speed_usage(void)
            "  Modes: tx/tcp_tx, rx/tcp_rx, udp_tx, udp_rx\n"
            "  Direction: TX = board to server; RX = server to board\n"
            "  Port: 1..65535; duration: 1..3600 seconds\n");
-    printf("  Payload: 16..%u bytes per socket call; default %u\n",
-           (unsigned)SPEED_BUF_MAX, (unsigned)SPEED_DEFAULT_PAYLOAD);
+    printf("  UDP payload: 16..%u bytes per datagram; default %u\n",
+           (unsigned)SPEED_UDP_BUF_MAX, (unsigned)SPEED_UDP_BUF_MAX);
+    printf("  TCP I/O size: 16..%u bytes per socket call; default %u\n",
+           (unsigned)SPEED_TCP_BUF_MAX, (unsigned)SPEED_TCP_DEFAULT);
     printf("  Rate: decimal Mbps, application bytes only\n"
            "  Steady: excludes first and final windows; unavailable for short tests\n"
            "  --quiet: suppress SAMPLE output; keep summary and steady statistics\n"
@@ -499,7 +502,16 @@ static int speed_test_run(struct speed_job *job)
         }
     }
 
-    memset(job->buffer, 0x5a, sizeof(job->buffer));
+    memset(job->buffer, 0x5a, (size_t)payload);
+
+    /* Start both counters before the UDP probe triggers server traffic.
+     * Otherwise packets queued during a probe delay disappear from RX_DRIVER
+     * but are later counted by recv(). recv() itself waits for the server. */
+    wifi_wlan_stats_reset();
+    memset(&meter, 0, sizeof(meter));
+    meter.start = rt_tick_get();
+    meter.win_start = meter.start;
+    deadline = meter.start + (rt_tick_t)seconds * RT_TICK_PER_SECOND;
 
     if (udp && (direction == 0))
     {
@@ -511,15 +523,7 @@ static int speed_test_run(struct speed_job *job)
             reason = "probe_error";
             goto setup_failed;
         }
-        rt_thread_mdelay(SPEED_PROBE_DELAY_MS);
     }
-    /* Count both data and reverse traffic (TCP ACKs) during the test. */
-    wifi_wlan_stats_reset();
-
-    memset(&meter, 0, sizeof(meter));
-    meter.start = rt_tick_get();
-    meter.win_start = meter.start;
-    deadline = meter.start + (rt_tick_t)seconds * RT_TICK_PER_SECOND;
 
     while ((rt_int32_t)(rt_tick_get() - deadline) < 0)
     {
@@ -689,9 +693,10 @@ static int wifi_speed_test(int argc, char **argv)
     }
     port = atoi(argv[3]);
     seconds = atoi(argv[4]);
-    payload = argc == 6 ? atoi(argv[5]) : (int)SPEED_DEFAULT_PAYLOAD;
+    payload = argc == 6 ? atoi(argv[5])
+                       : (int)(udp ? SPEED_UDP_BUF_MAX : SPEED_TCP_DEFAULT);
     if (port <= 0 || port > 65535 || seconds <= 0 || seconds > 3600 ||
-        payload < 16 || payload > (int)SPEED_BUF_MAX)
+        payload < 16 || payload > (int)(udp ? SPEED_UDP_BUF_MAX : SPEED_TCP_BUF_MAX))
     {
         printf("[speed] ERROR operation=validate reason=invalid_arguments\n");
         return -RT_EINVAL;
@@ -709,7 +714,7 @@ static int wifi_speed_test(int argc, char **argv)
         printf("[speed] ERROR operation=start reason=test_busy\n");
         return result;
     }
-    job = rt_calloc(1, sizeof(*job));
+    job = rt_calloc(1, sizeof(*job) + (size_t)payload);
     if (!job)
     {
         result = -RT_ENOMEM;

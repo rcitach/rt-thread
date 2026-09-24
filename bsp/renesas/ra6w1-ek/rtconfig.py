@@ -20,8 +20,6 @@ if  CROSS_TOOL == 'gcc':
 if os.getenv('RTT_EXEC_PATH'):
     EXEC_PATH = os.getenv('RTT_EXEC_PATH')
 
-# Match the vendor SDK throughput build by default. Set RTT_BUILD=debug for
-# source-level debugging when needed.
 BUILD = os.getenv('RTT_BUILD', 'release')
 
 if PLATFORM == 'gcc':
