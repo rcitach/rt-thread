@@ -18,6 +18,8 @@
 
 #ifdef RT_USING_LWIP
 #include <netif/ethernetif.h>
+#include <netif/ethernet.h>
+#include <lwip/ip.h>
 #include <lwip/netifapi.h>
 #ifdef LWIP_USING_DHCPD
 #include <dhcp_server.h>
@@ -355,6 +357,37 @@ static rt_err_t rt_wlan_lwip_protocol_recv(struct rt_wlan_device *wlan, void *bu
         return RT_EOK;
     }
 #endif
+}
+
+rt_err_t rt_wlan_lwip_direct_input(struct rt_wlan_device *wlan, struct pbuf *p)
+{
+    struct lwip_prot_des *lwip_prot;
+    struct netif *netif;
+    err_t result;
+
+    /* The caller must already be in the lwIP core context. */
+    if (wlan == RT_NULL || p == RT_NULL || wlan->prot == RT_NULL)
+    {
+        return -RT_EINVAL;
+    }
+
+    lwip_prot = (struct lwip_prot_des *)wlan->prot;
+    netif = lwip_prot->eth.netif;
+    if (netif == RT_NULL)
+    {
+        return -RT_ERROR;
+    }
+
+#if LWIP_ETHERNET
+    if (netif->flags & (NETIF_FLAG_ETHARP | NETIF_FLAG_ETHERNET))
+    {
+        result = ethernet_input(p, netif);
+    }
+    else
+#endif
+        result = ip_input(p, netif);
+
+    return result == ERR_OK ? RT_EOK : -RT_ERROR;
 }
 
 static rt_err_t rt_wlan_lwip_protocol_send(rt_device_t device, struct pbuf *p)
